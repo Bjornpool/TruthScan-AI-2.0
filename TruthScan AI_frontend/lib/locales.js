@@ -1,0 +1,99 @@
+/**
+ * Centralny słownik tłumaczeń (i18n) aplikacji TruthScan AI.
+ *
+ * Zawiera:
+ * - teksty interfejsu użytkownika w językach PL / EN,
+ * - etykiety wykresów i komponentów,
+ * - komunikaty systemowe i akcje użytkownika.
+ *
+ * Wykorzystywany przez komponenty UI oraz hooki językowe.
+ */
+
+const locales = {
+  pl: {
+    allSources: "Wszystkie źródła",
+    searchPlaceholder: "Wyszukaj artykuł...",
+    fakeNewsSources: "Fake News w różnych źródłach",
+    emotionsInArticles: "Emocje w Artykułach",
+    searchResults: "Wyniki wyszukiwania",
+    noResults: "Brak artykułów.",
+    fakeProbability: "Prawdopodobieństwo Fake News",
+    date: "Data",
+    welcomeTitle: "TruthScan AI",
+    welcomeDescription:
+      "Aplikacja wspierana sztuczną inteligencją do oceny wiarygodności informacji i wykrywania fake newsów w czasie rzeczywistym.",
+    goToDashboard: " Przejdź do Dashboardu",
+    selectSource: "Wybierz źródło",
+    articleSaved: "Artykuł został zapisany!",
+    saveError: "Nie udało się zapisać artykułu.",
+    confirmDelete: "Czy na pewno chcesz usunąć ten artykuł?",
+    articleDeleted: "Artykuł usunięty!",
+    deleteError: "Wystąpił błąd podczas usuwania artykułu.",
+    sentimentLabels: {
+      POSITIVE: "Pozytywny",
+      NEGATIVE: "Negatywny",
+      NEUTRAL: "Neutralny",
+    },
+    view: "Pokaż artykuł",
+    save: "Zapisz",
+    delete: "Usuń",
+  },
+  en: {
+    allSources: "All sources",
+    searchPlaceholder: "Search for an article...",
+    fakeNewsSources: "Fake News in Various Sources",
+    emotionsInArticles: "Emotions in Articles",
+    searchResults: "Search Results",
+    noResults: "No articles found.",
+    fakeProbability: "Fake News Probability",
+    date: "Date",
+    welcomeTitle: "TruthScan AI",
+    welcomeDescription:
+      "AI-powered app for evaluating news credibility and detecting fake news in real-time.",
+    goToDashboard: " Go to Dashboard",
+    selectSource: "Select Source",
+    articleSaved: "Article saved successfully!",
+    saveError: "Failed to save article.",
+    confirmDelete: "Are you sure you want to delete this article?",
+    articleDeleted: "Article deleted!",
+    deleteError: "An error occurred while deleting the article.",
+    sentimentLabels: {
+      POSITIVE: "Positive",
+      NEGATIVE: "Negative",
+      NEUTRAL: "Neutral",
+    },
+    view: "View article",
+    save: "Save",
+    delete: "Delete",
+  },
+  no: {
+    allSources: "Alle kilder",
+    searchPlaceholder: "Søk etter en artikkel...",
+    fakeNewsSources: "Falske nyheter i ulike kilder",
+    emotionsInArticles: "Følelser i artikler",
+    searchResults: "Søkeresultater",
+    noResults: "Ingen artikler funnet.",
+    fakeProbability: "Sannsynlighet for falske nyheter",
+    date: "Dato",
+    welcomeTitle: "TruthScan AI",
+    welcomeDescription:
+      "AI-drevet app for å vurdere troverdigheten til nyheter og oppdage falske nyheter i sanntid.",
+    goToDashboard: " Gå til dashbordet",
+    selectSource: "Velg kilde",
+    articleSaved: "Artikkelen ble lagret!",
+    saveError: "Kunne ikke lagre artikkelen.",
+    confirmDelete: "Er du sikker på at du vil slette denne artikkelen?",
+    articleDeleted: "Artikkelen ble slettet!",
+    deleteError: "Det oppstod en feil under sletting av artikkelen.",
+    sentimentLabels: {
+      POSITIVE: "Positivt",
+      NEGATIVE: "Negativt",
+      NEUTRAL: "Nøytralt",
+    },
+    view: "Vis artikkel",
+    save: "Lagre",
+    delete: "Slett",
+  },
+};
+
+export default locales;

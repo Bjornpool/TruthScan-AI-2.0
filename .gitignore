@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+venv/
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Environment
+.env
+
+# Data / generated files
+saved_articles.json
+benchmark_results/
+
+# Next.js build output
+.next/

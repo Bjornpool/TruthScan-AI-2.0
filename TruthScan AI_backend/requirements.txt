@@ -1,0 +1,22 @@
+# Zależności backendu aplikacji ThruScan
+
+# Framework API i serwer ASGI
+fastapi==0.115.12
+uvicorn==0.34.3
+starlette==0.46.2
+
+# Walidacja danych i modele
+pydantic==2.11.7
+pydantic_core==2.33.2
+annotated-types==0.7.0
+typing-extensions>=4.12.2
+
+# NLP i uczenie maszynowe
+transformers==4.44.2
+tokenizers==0.19.1
+torch==2.3.1
+
+# Przetwarzanie RSS i HTML
+feedparser==6.0.11
+beautifulsoup4==4.12.3
+requests==2.31.0
