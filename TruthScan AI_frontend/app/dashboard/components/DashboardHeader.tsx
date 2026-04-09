@@ -58,5 +58,3 @@ export default function DashboardHeader({ language, hydrated }: Props) {
     </div>
   );
 }
-
-

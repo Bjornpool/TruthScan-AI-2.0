@@ -4,6 +4,10 @@ Serwis NLP z architekturą plug-in.
 Każdy model jest reprezentowany przez adapter dziedziczący z ModelAdapter.
 Publiczne API (analyze_news, analyze_news_batch) pozostaje niezmienione,
 więc routes/news.py nie wymaga modyfikacji.
+
+Fake news detection używa jednej globalnej instancji BART (_shared_bart)
+współdzielonej przez wszystkie adaptery — model ładowany jest leniwie
+przy pierwszym wywołaniu get_shared_bart().
 """
 
 from abc import ABC, abstractmethod
@@ -16,6 +20,41 @@ from .config import SENTIMENT_MAP
 
 
 # ---------------------------------------------------------------------------
+# Współdzielony BART do wykrywania fake news (jeden egzemplarz dla wszystkich)
+# ---------------------------------------------------------------------------
+
+_shared_bart = None
+
+
+def get_shared_bart():
+    """
+    Zwraca globalną instancję potoku zero-shot-classification (BART).
+    Ładuje model przy pierwszym wywołaniu (lazy init).
+    """
+    global _shared_bart
+    if _shared_bart is None:
+        _shared_bart = pipeline(
+            "zero-shot-classification",
+            model="facebook/bart-large-mnli",
+        )
+    return _shared_bart
+
+
+def analyze_fake_news_shared(text: str) -> float:
+    """
+    Klasyfikuje tekst jako real/fake używając współdzielonego BART.
+
+    Zwraca:
+        Prawdopodobieństwo fake news w procentach (0.0 – 100.0).
+    """
+    result = get_shared_bart()(text, candidate_labels=["real", "fake"])
+    for lbl, score in zip(result["labels"], result["scores"]):
+        if lbl == "fake":
+            return round(score * 100, 2)
+    return 0.0
+
+
+# ---------------------------------------------------------------------------
 # Klasa bazowa
 # ---------------------------------------------------------------------------
 
@@ -23,78 +62,106 @@ class ModelAdapter(ABC):
     """
     Abstrakcyjny adapter modelu NLP.
 
-    Każdy konkretny adapter musi zaimplementować:
+    Każdy konkretny adapter implementuje:
       - analyze_sentiment(text) -> {"label": str, "score": float}
       - analyze_fake_news(text) -> {"labels": List[str], "scores": List[float]}
+
+    analyze_fake_news deleguje do współdzielonego BART (get_shared_bart),
+    więc każda podklasa może użyć domyślnej implementacji z tej klasy bazowej.
     """
 
     @property
     @abstractmethod
     def name(self) -> str:
-        """Unikalny identyfikator adaptera (np. 'roberta', 'xlm-roberta')."""
         ...
 
     @property
     @abstractmethod
     def supported_languages(self) -> List[str]:
-        """Kody języków obsługiwanych przez model (np. ['pl', 'en', 'no'])."""
         ...
 
     @abstractmethod
     def analyze_sentiment(self, text: str) -> Dict[str, Any]:
         """
-        Analizuje sentyment tekstu.
-
-        Zwraca:
-            {"label": str, "score": float}
-            gdzie label to jedna z wartości: 'positive' | 'negative' | 'neutral'
+        Zwraca {"label": str, "score": float}
+        gdzie label to: 'positive' | 'negative' | 'neutral'
         """
         ...
 
-    @abstractmethod
     def analyze_fake_news(self, text: str) -> Dict[str, Any]:
         """
-        Klasyfikuje tekst jako real/fake.
-
-        Zwraca:
-            {"labels": List[str], "scores": List[float]}
+        Klasyfikuje tekst używając współdzielonego BART.
+        Podklasy mogą nadpisać, ale domyślnie korzystają z _shared_bart.
         """
-        ...
+        result = get_shared_bart()(text, candidate_labels=["real", "fake"])
+        return {"labels": result["labels"], "scores": result["scores"]}
 
 
 # ---------------------------------------------------------------------------
-# Adaptery
+# Helpers
 # ---------------------------------------------------------------------------
+
+def _extract_pipeline_result(adapter_name: str, raw: Any) -> Dict[str, Any]:
+    """
+    Bezpiecznie wyciąga słownik {label, score} z surowego outputu pipeline.
+
+    Pipeline text-classification może zwrócić:
+      - [{"label": ..., "score": ...}]            (return_all_scores=False)
+      - [[{"label": ..., "score": ...}, ...]]      (return_all_scores=True / top_k=None)
+    """
+    print(f"[DEBUG] {adapter_name}: raw = {raw!r}")
+    try:
+        item = raw[0]
+    except (IndexError, TypeError) as exc:
+        print(f"[DEBUG] {adapter_name}: raw[0] failed: {exc}")
+        return {"label": "", "score": 0.0}
+
+    if isinstance(item, dict):
+        result = item
+    elif isinstance(item, list):
+        # return_all_scores=True zwraca listę list — bierzemy element o najwyższym score
+        if not item:
+            print(f"[DEBUG] {adapter_name}: item jest pustą listą")
+            return {"label": "", "score": 0.0}
+        result = max(item, key=lambda x: x.get("score", 0.0))
+    else:
+        print(f"[DEBUG] {adapter_name}: nieoczekiwany typ item: {type(item)!r}, raw={raw!r}")
+        return {"label": "", "score": 0.0}
+
+    print(f"[DEBUG] {adapter_name}: extracted = {result!r}")
+    return result
+
 
 def _normalize_sentiment_label(raw_label: str) -> str:
-    """
-    Normalizuje etykietę sentymentu z modelu do jednego z trzech wariantów:
-    'positive' | 'negative' | 'neutral'.
-
-    Obsługuje różne konwencje nazewnictwa stosowane przez modele HuggingFace.
-    """
     label = (raw_label or "").strip().lower()
 
     _POSITIVE = {"positive", "pos", "label_2", "2", "very positive"}
     _NEGATIVE = {"negative", "neg", "label_0", "0", "very negative"}
+    # "mixed" (NorBERT3 sentence-sentiment) → traktujemy jako neutral
+    _NEUTRAL  = {"neutral", "mixed", "label_1"}
 
     if label in _POSITIVE or label.startswith("pos"):
         return "positive"
     if label in _NEGATIVE or label.startswith("neg"):
         return "negative"
+    if label in _NEUTRAL:
+        return "neutral"
     return "neutral"
 
 
+# ---------------------------------------------------------------------------
+# Adaptery — każdy ładuje tylko swój model sentymentu
+# ---------------------------------------------------------------------------
+
 class RoBERTaAdapter(ModelAdapter):
     """
-    Adapter dla modeli anglojęzycznych (domyślny, zachowuje obecne zachowanie):
-      - sentyment : cardiffnlp/twitter-roberta-base-sentiment-latest
-      - fake news : facebook/bart-large-mnli (zero-shot)
+    Adapter anglojęzyczny.
+      sentyment: cardiffnlp/twitter-roberta-base-sentiment-latest
+      fake news: współdzielony BART (ModelAdapter.analyze_fake_news)
     """
 
     def __init__(self) -> None:
         self._sentiment_pipe = None
-        self._fake_pipe = None
 
     def _load(self) -> None:
         if self._sentiment_pipe is None:
@@ -102,11 +169,6 @@ class RoBERTaAdapter(ModelAdapter):
                 "text-classification",
                 model="cardiffnlp/twitter-roberta-base-sentiment-latest",
                 return_all_scores=False,
-            )
-        if self._fake_pipe is None:
-            self._fake_pipe = pipeline(
-                "zero-shot-classification",
-                model="facebook/bart-large-mnli",
             )
 
     @property
@@ -119,28 +181,23 @@ class RoBERTaAdapter(ModelAdapter):
 
     def analyze_sentiment(self, text: str) -> Dict[str, Any]:
         self._load()
-        result = self._sentiment_pipe(text)[0]
+        raw = self._sentiment_pipe(text)
+        result = _extract_pipeline_result(self.name, raw)
         return {
             "label": _normalize_sentiment_label(result.get("label", "")),
             "score": float(result.get("score", 0.0)),
         }
 
-    def analyze_fake_news(self, text: str) -> Dict[str, Any]:
-        self._load()
-        result = self._fake_pipe(text, candidate_labels=["real", "fake"])
-        return {"labels": result["labels"], "scores": result["scores"]}
-
 
 class XLMRoBERTaAdapter(ModelAdapter):
     """
-    Adapter wielojęzyczny (pl, en, no):
-      - sentyment : cardiffnlp/twitter-xlm-roberta-base-sentiment
-      - fake news : facebook/bart-large-mnli (zero-shot, transfer między językami)
+    Adapter wielojęzyczny (pl, en, no).
+      sentyment: cardiffnlp/twitter-xlm-roberta-base-sentiment
+      fake news: współdzielony BART
     """
 
     def __init__(self) -> None:
         self._sentiment_pipe = None
-        self._fake_pipe = None
 
     def _load(self) -> None:
         if self._sentiment_pipe is None:
@@ -148,11 +205,6 @@ class XLMRoBERTaAdapter(ModelAdapter):
                 "text-classification",
                 model="cardiffnlp/twitter-xlm-roberta-base-sentiment",
                 return_all_scores=False,
-            )
-        if self._fake_pipe is None:
-            self._fake_pipe = pipeline(
-                "zero-shot-classification",
-                model="facebook/bart-large-mnli",
             )
 
     @property
@@ -165,26 +217,19 @@ class XLMRoBERTaAdapter(ModelAdapter):
 
     def analyze_sentiment(self, text: str) -> Dict[str, Any]:
         self._load()
-        result = self._sentiment_pipe(text)[0]
+        raw = self._sentiment_pipe(text)
+        result = _extract_pipeline_result(self.name, raw)
         return {
             "label": _normalize_sentiment_label(result.get("label", "")),
             "score": float(result.get("score", 0.0)),
         }
 
-    def analyze_fake_news(self, text: str) -> Dict[str, Any]:
-        self._load()
-        result = self._fake_pipe(text, candidate_labels=["real", "fake"])
-        return {"labels": result["labels"], "scores": result["scores"]}
-
 
 class HerBERTAdapter(ModelAdapter):
     """
-    Adapter dla języka polskiego (HerBERT):
-      - sentyment : allegro/herbert-base-cased
-        UWAGA: to model bazowy – wymaga fine-tuningu na zbiorze sentymentu
-        (np. PolEmo 2.0). Aby podmienić checkpoint, przekaż sentiment_model
-        w konstruktorze lub zmień SENTIMENT_MODEL przed pierwszym użyciem.
-      - fake news : facebook/bart-large-mnli (zero-shot, transfer EN→PL)
+    Adapter dla języka polskiego (HerBERT).
+      sentyment: allegro/herbert-base-cased (model bazowy — wymaga fine-tuningu)
+      fake news: współdzielony BART
     """
 
     SENTIMENT_MODEL: str = "allegro/herbert-base-cased"
@@ -192,7 +237,6 @@ class HerBERTAdapter(ModelAdapter):
     def __init__(self, sentiment_model: Optional[str] = None) -> None:
         self._sentiment_model_id = sentiment_model or self.SENTIMENT_MODEL
         self._sentiment_pipe = None
-        self._fake_pipe = None
 
     def _load(self) -> None:
         if self._sentiment_pipe is None:
@@ -200,11 +244,6 @@ class HerBERTAdapter(ModelAdapter):
                 "text-classification",
                 model=self._sentiment_model_id,
                 return_all_scores=False,
-            )
-        if self._fake_pipe is None:
-            self._fake_pipe = pipeline(
-                "zero-shot-classification",
-                model="facebook/bart-large-mnli",
             )
 
     @property
@@ -217,34 +256,30 @@ class HerBERTAdapter(ModelAdapter):
 
     def analyze_sentiment(self, text: str) -> Dict[str, Any]:
         self._load()
-        result = self._sentiment_pipe(text)[0]
+        raw = self._sentiment_pipe(text)
+        result = _extract_pipeline_result(self.name, raw)
         return {
             "label": _normalize_sentiment_label(result.get("label", "")),
             "score": float(result.get("score", 0.0)),
         }
 
-    def analyze_fake_news(self, text: str) -> Dict[str, Any]:
-        self._load()
-        result = self._fake_pipe(text, candidate_labels=["real", "fake"])
-        return {"labels": result["labels"], "scores": result["scores"]}
-
 
 class NorBERTAdapter(ModelAdapter):
     """
-    Adapter dla języka norweskiego (NorBERT 3):
-      - sentyment : ltgoslo/norbert3-base
-        UWAGA: to model bazowy – wymaga fine-tuningu na zbiorze sentymentu
-        (np. NoReC). Aby podmienić checkpoint, przekaż sentiment_model
-        w konstruktorze lub zmień SENTIMENT_MODEL przed pierwszym użyciem.
-      - fake news : facebook/bart-large-mnli (zero-shot, transfer EN→NO)
+    Adapter dla języka norweskiego.
+      sentyment: cardiffnlp/twitter-xlm-roberta-base-sentiment-multilingual
+                 (wielojęzyczny XLM-RoBERTa Cardiff, obsługuje norweski)
+      fake news: współdzielony BART
     """
 
-    SENTIMENT_MODEL: str = "ltgoslo/norbert3-base"
+    # cardiffnlp/twitter-xlm-roberta-base-sentiment-multilingual —
+    # wielojęzyczny model Cardiff fine-tuned na sentymencie (obsługuje norweski),
+    # standardowa architektura XLM-RoBERTa kompatybilna z pipeline("text-classification").
+    SENTIMENT_MODEL: str = "cardiffnlp/twitter-xlm-roberta-base-sentiment-multilingual"
 
     def __init__(self, sentiment_model: Optional[str] = None) -> None:
         self._sentiment_model_id = sentiment_model or self.SENTIMENT_MODEL
         self._sentiment_pipe = None
-        self._fake_pipe = None
 
     def _load(self) -> None:
         if self._sentiment_pipe is None:
@@ -252,11 +287,6 @@ class NorBERTAdapter(ModelAdapter):
                 "text-classification",
                 model=self._sentiment_model_id,
                 return_all_scores=False,
-            )
-        if self._fake_pipe is None:
-            self._fake_pipe = pipeline(
-                "zero-shot-classification",
-                model="facebook/bart-large-mnli",
             )
 
     @property
@@ -269,43 +299,25 @@ class NorBERTAdapter(ModelAdapter):
 
     def analyze_sentiment(self, text: str) -> Dict[str, Any]:
         self._load()
-        result = self._sentiment_pipe(text)[0]
+        raw = self._sentiment_pipe(text)
+        result = _extract_pipeline_result(self.name, raw)
         return {
             "label": _normalize_sentiment_label(result.get("label", "")),
             "score": float(result.get("score", 0.0)),
         }
-
-    def analyze_fake_news(self, text: str) -> Dict[str, Any]:
-        self._load()
-        result = self._fake_pipe(text, candidate_labels=["real", "fake"])
-        return {"labels": result["labels"], "scores": result["scores"]}
 
 
 # ---------------------------------------------------------------------------
 # Rejestr adapterów — lazy initialization
 # ---------------------------------------------------------------------------
 
-# Przy imporcie pusty — żaden adapter nie jest tworzony ani ładowany.
-# Adaptery są instancjonowane dopiero przy pierwszym wywołaniu get_adapter().
 _REGISTRY: Dict[str, ModelAdapter] = {}
-
-# Adapter aktywny globalnie; None oznacza „jeszcze nie wybrano".
 _active_adapter: Optional[ModelAdapter] = None
-
-# Executor do równoległej analizy (ograniczenie obciążenia CPU)
 executor = ThreadPoolExecutor(max_workers=3)
-
-# Zbiór nazw wbudowanych adapterów — służy do walidacji przed inicjalizacją
 _BUILTIN_ADAPTERS = {"roberta", "xlm-roberta", "herbert", "norbert"}
 
 
 def _init_registry() -> None:
-    """
-    Tworzy wbudowane adaptery i wpisuje je do rejestru.
-
-    Wywoływana leniwie przy pierwszym get_adapter() lub set_active_adapter().
-    Kolejne wywołania są bezoperacyjne (idempotentna).
-    """
     if _REGISTRY:
         return
     _REGISTRY["roberta"]     = RoBERTaAdapter()
@@ -315,12 +327,6 @@ def _init_registry() -> None:
 
 
 def get_adapter(name: str) -> ModelAdapter:
-    """
-    Zwraca adapter o podanej nazwie.
-
-    Przy pierwszym wywołaniu inicjalizuje rejestr (bez ładowania wag modeli).
-    Rzuca ValueError dla nieznanej nazwy.
-    """
     _init_registry()
     if name not in _REGISTRY:
         raise ValueError(
@@ -330,36 +336,16 @@ def get_adapter(name: str) -> ModelAdapter:
 
 
 def set_active_adapter(name: str) -> None:
-    """
-    Ustawia aktywny adapter dla całej aplikacji.
-
-    Przykład:
-        from app.nlp_service import set_active_adapter
-        set_active_adapter("xlm-roberta")
-    """
     global _active_adapter
     _active_adapter = get_adapter(name)
 
 
 def register_adapter(adapter: ModelAdapter) -> None:
-    """
-    Rejestruje nowy adapter (np. fine-tuned checkpoint) pod jego nazwą.
-    Może być wywołane przed lub po _init_registry().
-
-    Przykład:
-        norbert_ft = NorBERTAdapter(sentiment_model="user/norbert3-norec")
-        register_adapter(norbert_ft)
-        set_active_adapter("norbert")
-    """
     _init_registry()
     _REGISTRY[adapter.name] = adapter
 
 
 def _get_active_adapter() -> ModelAdapter:
-    """
-    Zwraca aktualnie aktywny adapter.
-    Jeśli nie ustawiono, domyślnie inicjalizuje i zwraca RoBERTaAdapter.
-    """
     global _active_adapter
     if _active_adapter is None:
         _active_adapter = get_adapter("roberta")
@@ -367,7 +353,7 @@ def _get_active_adapter() -> ModelAdapter:
 
 
 # ---------------------------------------------------------------------------
-# Publiczne API – interfejs niezmieniony względem poprzedniej wersji
+# Publiczne API
 # ---------------------------------------------------------------------------
 
 def analyze_news(
@@ -377,11 +363,6 @@ def analyze_news(
 ) -> dict:
     """
     Analizuje pojedynczy tekst pod kątem sentymentu i fake news.
-
-    Args:
-        text:    Tekst do analizy.
-        lang:    Kod języka wynikowych etykiet ('pl' | 'en' | 'no').
-        adapter: Opcjonalny adapter; jeśli None, używa _active_adapter.
 
     Returns:
         {"sentiment": str, "fake_probability": float, "sentiment_score": float}
@@ -420,14 +401,7 @@ def analyze_news_batch(
     lang: str = "pl",
     adapter: Optional[ModelAdapter] = None,
 ) -> List[Dict[str, Any]]:
-    """
-    Analiza wielu tekstów w trybie batch z użyciem ThreadPoolExecutor.
-
-    Args:
-        texts:   Lista tekstów do analizy.
-        lang:    Kod języka wynikowych etykiet.
-        adapter: Opcjonalny adapter; jeśli None, używa _active_adapter.
-    """
+    """Analiza wielu tekstów w trybie batch z użyciem ThreadPoolExecutor."""
     if not texts:
         return []
 

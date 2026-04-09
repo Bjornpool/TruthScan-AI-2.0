@@ -35,7 +35,7 @@ export function useNewsStream(source: string, lang: Lang = "pl", limit: number =
     const cacheKey = newsKey(source, lang);
     const cached = cache.get<Article[]>(cacheKey);
 
-     // Jeżeli dane są w cache, pomijamy połączenie SSE
+    // Jeżeli dane są w cache, pomijamy połączenie SSE
     if (cached && cached.length > 0) {
       setState({
         articles: cached,
@@ -98,7 +98,7 @@ export function useNewsStream(source: string, lang: Lang = "pl", limit: number =
 
     const handleDone = () => {
       setState((s) => ({ ...s, loading: false }));
-       // Zapis pełnego wyniku do cache po zakończeniu strumienia
+      // Zapis pełnego wyniku do cache po zakończeniu strumienia
       if (collected.length > 0) {
         cache.set(cacheKey, collected);
       }

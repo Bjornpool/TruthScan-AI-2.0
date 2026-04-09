@@ -11,23 +11,32 @@ from fastapi.responses import StreamingResponse
 from fastapi_cache.decorator import cache
 
 from ..config import CACHE_TTL, NEWS_FEEDS
-from ..rss_utils import fetch_feed, clean_html, get_from_cache, set_to_cache
-from ..nlp_service import analyze_news
+from ..rss_utils import fetch_feed, clean_html, get_from_cache, set_to_cache, FeedFetchError
+from ..nlp_service import analyze_news, set_active_adapter
 
 router = APIRouter()
 
 
 @router.get("/news/{source}")
-def get_news(source: str, lang: str = "pl"):
+def get_news(source: str, lang: str = "pl", model: str = "roberta"):
     # Walidacja źródła
     if source not in NEWS_FEEDS:
         raise HTTPException(status_code=404, detail="Źródło nieobsługiwane")
 
+    # Ustawienie aktywnego adaptera NLP
+    try:
+        set_active_adapter(model)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Nieznany model: {model}")
+
     url = NEWS_FEEDS[source]
 
-    # Pobranie RSS
+    # Pobranie RSS — FeedFetchError (404/timeout) zwraca pustą listę zamiast HTTP 500
     try:
         feed = fetch_feed(url)
+    except FeedFetchError as e:
+        print(f"⚠️  Feed niedostępny [{source}]: {e}")
+        return {"source": source, "articles": [], "error": str(e)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Błąd pobierania newsów: {str(e)}")
 
@@ -49,6 +58,7 @@ def get_news(source: str, lang: str = "pl"):
             "summary": summary,
             "published": entry.get("published", "Brak daty"),
             "source": source,
+            "model": model,
             **analysis
         })
 
@@ -57,9 +67,15 @@ def get_news(source: str, lang: str = "pl"):
 
 # Strumieniowanie newsów przez SSE
 @router.get("/stream-news/{source}")
-async def stream_news(source: str, lang: str = "pl"):
+async def stream_news(source: str, lang: str = "pl", model: str = "roberta"):
     if source not in NEWS_FEEDS:
         raise HTTPException(status_code=404, detail="Źródło nieobsługiwane")
+
+    # Walidacja i ustawienie adaptera przed uruchomieniem generatora
+    try:
+        set_active_adapter(model)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Nieznany model: {model}")
 
     async def event_generator():
         # Próba pobrania RSS z cache
@@ -70,6 +86,11 @@ async def stream_news(source: str, lang: str = "pl"):
             else:
                 feed = fetch_feed(NEWS_FEEDS[source])
                 set_to_cache(source, feed)
+        except FeedFetchError as e:
+            print(f"⚠️  Feed niedostępny [{source}]: {e}")
+            yield f"event: backend_error\ndata: {json.dumps({'message': str(e), 'status': e.status_code})}\n\n"
+            yield f"event: done\ndata: {json.dumps({'count': 0})}\n\n"
+            return
         except Exception as e:
             yield f"event: backend_error\ndata: {json.dumps({'message': str(e)})}\n\n"
             yield f"event: done\ndata: {json.dumps({'count': 0})}\n\n"
@@ -99,6 +120,7 @@ async def stream_news(source: str, lang: str = "pl"):
                 "summary": summary,
                 "published": entry.get("published", "Brak daty"),
                 "source": source,
+                "model": model,
                 **analysis,
             }
 
@@ -108,7 +130,17 @@ async def stream_news(source: str, lang: str = "pl"):
 
         yield f"event: done\ndata: {json.dumps({'count': sent})}\n\n"
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Content-Type": "text/event-stream",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "*",
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.get("/api/charts/summary")
@@ -174,13 +206,13 @@ async def get_charts_summary(lang: str = "pl"):
 
 @router.get("/emotion-stats/{source}")
 @cache(expire=CACHE_TTL)
-def get_emotion_stats(source: str, lang: str = "pl"):
+def get_emotion_stats(source: str, lang: str = "pl", model: str = "roberta"):
     # Statystyki emocji dla jednego źródła
     if source not in NEWS_FEEDS:
         raise HTTPException(status_code=404, detail="Źródło nieobsługiwane")
 
     try:
-        news_data = get_news(source, lang)
+        news_data = get_news(source, lang, model)
         articles = news_data.get("articles", [])
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Błąd generowania statystyk: {str(e)}")

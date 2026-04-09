@@ -64,7 +64,7 @@ export default function LiveNewsFeed({ source, language }: LiveNewsFeedProps) {
     error,
     progress = 0,
     total = 0,
-  } = useNewsStream(source);
+  } = useNewsStream(source, language, 5);
 
   const [localArticles, setLocalArticles] = useState<Article[]>([]);
   const t = TEXT_CONTENT[language];

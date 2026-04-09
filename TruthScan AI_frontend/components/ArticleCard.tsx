@@ -16,6 +16,7 @@ import { useArticleContent } from "../app/hooks/useArticleContent";
 import { useFavicon } from "../app/hooks/useFavicon";
 import { useSentiment } from "../app/hooks/useSentiment";
 import PDFModal from "./PDFModal";
+import CompareModal from "./CompareModal";
 import type { Lang } from "../lib/types";
 
 interface ArticleCardProps {
@@ -44,6 +45,7 @@ export default function ArticleCard({
   const [isLoadingContent, setIsLoadingContent] = useState(false);
   const [fullContent, setFullContent] = useState<string>("");
   const [showPDF, setShowPDF] = useState(false);
+  const [showCompare, setShowCompare] = useState(false);
   const isCompact = variant === "compact";
   const t = locales[language] ?? locales.pl;
 
@@ -163,6 +165,14 @@ export default function ArticleCard({
         </a>
       )}
 
+      <button
+        onClick={() => setShowCompare(true)}
+        className="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300
+                   font-medium transition"
+      >
+        🔬 {T("Porównaj modele", "Sammenlign modeller", "Compare models")}
+      </button>
+
       {savedView && (
         <button
           onClick={handleExportPDF}
@@ -208,9 +218,16 @@ export default function ArticleCard({
   return (
     <>
       <article className={[
-        "rounded-2xl border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 transition-all duration-300",
+        "relative rounded-2xl border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 transition-all duration-300",
         isCompact ? "p-4 shadow-sm hover:shadow-md" : "p-5 shadow-md hover:shadow-lg hover:-translate-y-0.5"
       ].join(" ")}>
+        {article.model && (
+          <span className="absolute top-3 right-3 text-xs font-medium px-2 py-0.5 rounded-full
+                           bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300
+                           border border-blue-200 dark:border-blue-700/50">
+            {article.model}
+          </span>
+        )}
         {renderHeader()}
         {renderDescription()}
         {renderMetadata()}
@@ -229,6 +246,14 @@ export default function ArticleCard({
         onExportStart={handlePDFExportStart}
         onExportEnd={handlePDFExportEnd}
       />
+
+      {showCompare && (
+        <CompareModal
+          article={article}
+          language={language}
+          onClose={() => setShowCompare(false)}
+        />
+      )}
     </>
   );
 }

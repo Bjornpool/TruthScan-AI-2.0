@@ -8,8 +8,8 @@ import type { Lang } from "../../lib/types";
 
 const ALL_SOURCES = [
   "BBC", "CNN", "NYTimes", "Guardian", "AlJazeera",
-  "Money", "PolsatNews", "GazetaPrawna", "SpidersWeb", "Bankier",
-  "NRK", "VG", "Dagbladet", "Aftenposten",
+  "Money", "PolsatNews", "TVN24", "SpidersWeb", "Bankier",
+  "NRK", "VG", "TV2", "Aftenposten",
 ] as const;
 
 export function useDashboardCharts(language: Lang) {
@@ -61,6 +61,8 @@ export function useDashboardCharts(language: Lang) {
     barsMapRef.current.clear();
     emosMapRef.current = { POSITIVE: 0, NEGATIVE: 0, NEUTRAL: 0 };
 
+    console.log(`📊 Ładuję wykresy: ${ALL_SOURCES.length} źródeł, lang=${language}`);
+
     const promises = ALL_SOURCES.map(async (src) => {
       try {
         const { news, emotions } = await fetchOneSource(src, language);
@@ -74,16 +76,21 @@ export function useDashboardCharts(language: Lang) {
           emosMapRef.current[normalized] = (emosMapRef.current[normalized] || 0) + (count as number);
         }
 
-        refreshChartsFromRefs();
-        setProgressCount((c) => c + 1);
+        console.log(`✅ [${src}] fake=${news?.fake_news}, emotions=`, emotions);
       } catch (error) {
-        console.error(`Error loading source ${src}:`, error);
+        console.warn(`⚠️ [${src}] błąd pobierania:`, error);
+        // Ustaw 0 dla niedostępnych źródeł tak żeby słupek się pojawił
+        barsMapRef.current.set(src, 0);
+      } finally {
+        // Zawsze aktualizuj stan — nawet przy błędzie żeby wykresy się pokazały
+        refreshChartsFromRefs();
         setProgressCount((c) => c + 1);
       }
     });
 
     await Promise.allSettled(promises);
     setChartsLoading(false);
+    console.log(`📊 Wykresy gotowe. Słupki:`, barsMapRef.current.size, `Emocje:`, emosMapRef.current);
   }, [language]);
 
   return {

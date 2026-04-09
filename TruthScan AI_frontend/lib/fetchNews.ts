@@ -22,6 +22,7 @@ export interface Article {
   publishedAt?: string;
   source: string;
   url?: string;
+  model?: string;
   [key: string]: any;
 }
 
@@ -65,12 +66,12 @@ const SOURCE_MAP: Record<string, string> = {
   aljazeera: "AlJazeera",
   money: "Money",
   polsatnews: "PolsatNews",
-  gazetaprawna: "GazetaPrawna",
+  tvn24: "TVN24",
   spidersweb: "SpidersWeb",
   bankier: "Bankier",
   nrk: "NRK",
   vg: "VG",
-  dagbladet: "Dagbladet",
+  tv2: "TV2",
   aftenposten: "Aftenposten",
 };
 
@@ -101,7 +102,13 @@ export async function fetchOneSource(
   const emotions: Emotions = {};
 
   try {
-    const res = await fetch(`http://127.0.0.1:8000/news/${src}?lang=${language}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30_000);
+    const res = await fetch(
+      `http://127.0.0.1:8000/news/${src}?lang=${language}`,
+      { signal: controller.signal }
+    );
+    clearTimeout(timeoutId);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const data = await res.json();

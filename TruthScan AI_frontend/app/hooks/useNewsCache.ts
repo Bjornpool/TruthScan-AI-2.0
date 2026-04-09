@@ -20,7 +20,7 @@ type Article = {
 
 type NewsResponse = { source: string; articles: Article[] };
 
-export function useCachedNews(source: string, lang: Lang = "pl") {
+export function useCachedNews(source: string, lang: Lang = "pl", model: string = "roberta") {
   const [data, setData] = useState<Article[] | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +28,7 @@ export function useCachedNews(source: string, lang: Lang = "pl") {
 
   useEffect(() => {
     let mounted = true;
-    const key = newsKey(source, lang);
+    const key = newsKey(source, lang, model);
 
     // Odczyt danych z cache przed wykonaniem zapytania HTTP
     const cached = cache.get<Article[]>(key);
@@ -41,7 +41,7 @@ export function useCachedNews(source: string, lang: Lang = "pl") {
     (async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/news/${encodeURIComponent(source)}?lang=${lang}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/news/${encodeURIComponent(source)}?lang=${lang}&model=${model}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json: NewsResponse = await res.json();
         const articles = json.articles ?? [];
@@ -49,7 +49,7 @@ export function useCachedNews(source: string, lang: Lang = "pl") {
         setData(articles);
 
         // Zapis danych w cache po poprawnym pobraniu
-        cache.set(key, articles); 
+        cache.set(key, articles);
       } catch (e: any) {
         if (!mounted) return;
         setError(e?.message ?? "fetch error");
@@ -62,15 +62,15 @@ export function useCachedNews(source: string, lang: Lang = "pl") {
       // Zabezpieczenie przed aktualizacją stanu po odmontowaniu komponentu
       mounted = false;
     };
-  }, [source, lang]);
+  }, [source, lang, model]);
 
   const refresh = async () => {
-    const key = newsKey(source, lang);
+    const key = newsKey(source, lang, model);
     cache.del(key);
     setData(null);
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/news/${encodeURIComponent(source)}?lang=${lang}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/news/${encodeURIComponent(source)}?lang=${lang}&model=${model}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json: NewsResponse = await res.json();
       const articles = json.articles ?? [];

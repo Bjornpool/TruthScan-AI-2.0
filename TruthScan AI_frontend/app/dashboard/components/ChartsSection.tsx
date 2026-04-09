@@ -28,7 +28,7 @@ interface Props {
   setSelectedSource: (source: string) => void;
 }
 
-const DASHBOARD_CHARTS_KEY = "dashboard:charts";
+const CHARTS_CACHE_KEY = "dashboard:charts";
 
 type ChartsCache = {
   barData: any[];
@@ -67,7 +67,7 @@ export default function ChartsSection({
     
     import("../../../app/stores/newsCache").then(({ useNewsCache }) => {
       const cache = useNewsCache.getState();
-      setCachedCharts(cache.get<ChartsCache>(DASHBOARD_CHARTS_KEY));
+      setCachedCharts(cache.get<ChartsCache>(CHARTS_CACHE_KEY));
     });
   }, []);
 
@@ -116,11 +116,11 @@ export default function ChartsSection({
     import("../../../app/stores/newsCache").then(({ useNewsCache }) => {
       const cache = useNewsCache.getState();
       
-      const currentCache = cache.get<ChartsCache>(DASHBOARD_CHARTS_KEY);
-      const areDataEqual = 
+      const currentCache = cache.get<ChartsCache>(CHARTS_CACHE_KEY);
+      const areDataEqual =
         JSON.stringify(currentCache?.barData) === JSON.stringify(barData) &&
         JSON.stringify(currentCache?.emotionData) === JSON.stringify(emotionData);
-        
+
       if (areDataEqual) return;
 
       const payload: ChartsCache = {
@@ -128,7 +128,7 @@ export default function ChartsSection({
         emotionData,
         totalSources,
       };
-      cache.set(DASHBOARD_CHARTS_KEY, payload);
+      cache.set(CHARTS_CACHE_KEY, payload);
       setCachedCharts(payload); 
     });
   }, [

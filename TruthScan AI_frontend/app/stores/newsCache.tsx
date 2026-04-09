@@ -84,7 +84,7 @@ export const useNewsCache = create<NewsCacheState>((set, get) => ({
   },
 }));
 
-// helper: klucz cache dla /news
-export const newsKey = (source: string, lang = "pl") => `news:${source}:${lang}`;
+// helper: klucz cache dla /news (uwzględnia model NLP)
+export const newsKey = (source: string, lang = "pl", model = "roberta") => `news:${source}:${lang}:${model}`;
 // helper: klucz cache dla /emotion-stats
 export const statsKey = (source: string) => `stats:${source}`;

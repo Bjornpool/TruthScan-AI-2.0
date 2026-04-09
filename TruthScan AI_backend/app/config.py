@@ -5,10 +5,18 @@ Centralna konfiguracja aplikacji oraz stałe wykorzystywane w wielu modułach.
 import os
 from pathlib import Path
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+except ImportError:
+    pass  # python-dotenv opcjonalne; zmienne można też ustawić w środowisku
+
 # Konfiguracja CORS
+# Uwaga: credentials=True jest niekompatybilne z origins=["*"] w przeglądarkach
+# (spec CORS odrzuca tę kombinację). Dla dev/thesis używamy credentials=False.
 CORS_ALLOW_ORIGINS = ["*"]
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_METHODS = ["*"]
+CORS_ALLOW_CREDENTIALS = False
+CORS_ALLOW_METHODS = ["GET", "POST", "DELETE", "OPTIONS"]
 CORS_ALLOW_HEADERS = ["*"]
 
 # Lista obsługiwanych źródeł RSS
@@ -22,13 +30,13 @@ NEWS_FEEDS = {
     # Polskie
     "Money":        "https://www.money.pl/rss/",
     "PolsatNews":   "https://www.polsatnews.pl/rss/wszystkie.xml",
-    "GazetaPrawna": "https://www.gazetaprawna.pl/rss.xml",
+    "TVN24":        "https://tvn24.pl/najnowsze.xml",
     "SpidersWeb":   "https://spidersweb.pl/feed",
     "Bankier":      "https://www.bankier.pl/rss/wiadomosci.xml",
     # Norweskie
     "NRK":          "https://www.nrk.no/toppsaker.rss",
     "VG":           "https://www.vg.no/rss/feed/?limit=10",
-    "Dagbladet":    "https://www.dagbladet.no/rss",
+    "TV2":          "https://www.tv2.no/rss/alt",
     "Aftenposten":  "https://www.aftenposten.no/rss",
 }
 
@@ -48,3 +56,6 @@ CACHE_TTL_SECONDS = 120
 # Konfiguracja Redis (jeśli używany jako backend cache)
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 CACHE_TTL = 300
+
+# Klucz API Anthropic (Claude)
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")

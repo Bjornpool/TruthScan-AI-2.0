@@ -38,14 +38,14 @@ export default function SourceSelector({ selectedSource, setSelectedSource, lang
       <optgroup label="🇵🇱 Polski">
         <option value="Money">Money</option>
         <option value="PolsatNews">Polsat News</option>
-        <option value="GazetaPrawna">Gazeta Prawna</option>
+        <option value="TVN24">TVN24</option>
         <option value="SpidersWeb">Spider’s Web</option>
         <option value="Bankier">Bankier</option>
       </optgroup>
       <optgroup label="🇳🇴 Norsk">
         <option value="NRK">NRK</option>
         <option value="VG">VG</option>
-        <option value="Dagbladet">Dagbladet</option>
+        <option value="TV2">TV2</option>
         <option value="Aftenposten">Aftenposten</option>
       </optgroup>
     </select>

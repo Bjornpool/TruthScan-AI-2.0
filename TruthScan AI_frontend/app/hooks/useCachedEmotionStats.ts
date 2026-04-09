@@ -24,7 +24,7 @@ type EmotionStats = {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
-export function useCachedEmotionStats(source: string) {
+export function useCachedEmotionStats(source: string, model: string = "roberta") {
   const cache = useNewsCache();
   const [data, setData] = useState<EmotionStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,7 +33,7 @@ export function useCachedEmotionStats(source: string) {
   useEffect(() => {
     if (!source) return;
 
-    const key = statsKey(source);
+    const key = `${statsKey(source)}:${model}`;
     const cached = cache.get<EmotionStats>(key);
 
     // Jeśli dane są w cache, pomijamy request do API
@@ -46,7 +46,9 @@ export function useCachedEmotionStats(source: string) {
     (async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${API_URL}/emotion-stats/${encodeURIComponent(source)}`);
+        const res = await fetch(
+          `${API_URL}/emotion-stats/${encodeURIComponent(source)}?model=${model}`
+        );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = (await res.json()) as EmotionStats;
         setData(json);
@@ -57,7 +59,7 @@ export function useCachedEmotionStats(source: string) {
         setLoading(false);
       }
     })();
-  }, [source]);
+  }, [source, model]);
 
   return { data, loading, error };
 }
