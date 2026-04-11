@@ -22,7 +22,6 @@ export interface Article {
   publishedAt?: string;
   source: string;
   url?: string;
-  model?: string;
   [key: string]: any;
 }
 

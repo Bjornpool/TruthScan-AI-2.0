@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react";
 import { useLanguage } from "../hooks/useLanguage";
 import DashboardHeader from "./components/DashboardHeader";
+import ModelInfoSection from "./components/ModelInfoSection";
 import ChartsSection from "./components/ChartsSection";
 import SourceComparison from "./components/SourceComparison";
 
@@ -63,6 +64,8 @@ export default function DashboardPage() {
           </button>
         </div>
       </div>
+
+      <ModelInfoSection language={language} />
 
       <ChartsSection
         key={`${selectedSource}:${reloadKey}`}

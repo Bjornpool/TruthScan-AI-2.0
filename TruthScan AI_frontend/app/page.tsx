@@ -8,7 +8,15 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import locales from "../lib/locales";
 import TipModal from "../app/TipModel";
+import { fetchAllNews } from "../lib/fetchNews";
+import { useNewsCache, newsKey } from "./stores/newsCache";
 import type { Lang } from "../lib/types";
+
+const PREFETCH_SOURCES = [
+  "BBC", "CNN", "NYTimes", "Guardian", "AlJazeera",
+  "Money", "PolsatNews", "TVN24", "SpidersWeb", "Bankier",
+  "NRK", "VG", "E24", "Aftenposten",
+] as const;
 
 export default function HomePage() {
 
@@ -25,9 +33,41 @@ export default function HomePage() {
       if (detail === "pl" || detail === "en" || detail === "no") setLanguage(detail as Lang);
     };
     window.addEventListener("app:langchange", onLangChange as EventListener);
-    
+
     return () => window.removeEventListener("app:langchange", onLangChange as EventListener);
   }, []);
+
+  // Prefetching artykułów w tle — dane trafiają do cache zanim użytkownik otworzy dashboard
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const lang = (localStorage.getItem("lang") as Lang) || "pl";
+      const cacheState = useNewsCache.getState();
+
+      // Pobierz tylko źródła których nie ma jeszcze w cache
+      const missing = PREFETCH_SOURCES.filter(
+        (src) => !cacheState.get(newsKey(src))
+      );
+      if (missing.length === 0) return;
+
+      console.log(`[PREFETCH] start: ${missing.length} źródeł, lang=${lang}`);
+
+      fetchAllNews([...missing], lang, {
+        concurrency: 3,
+        onPartial: ({ source, articles }) => {
+          if (articles.length === 0) return;
+          // Zapis do Zustand — wyzwoli subskrypcję useDashboardCharts
+          useNewsCache.getState().set(newsKey(source), articles);
+          console.log(`[PREFETCH] [${source}] zapisano ${articles.length} art.`);
+        },
+      }).then(() => {
+        console.log("[PREFETCH] gotowe");
+      }).catch(() => {
+        // Prefetch cichy — błędy ignorujemy
+      });
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const t = locales[language];
     const T = (pl: string, no: string, en: string) =>

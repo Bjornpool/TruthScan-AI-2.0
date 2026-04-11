@@ -221,13 +221,6 @@ export default function ArticleCard({
         "relative rounded-2xl border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 transition-all duration-300",
         isCompact ? "p-4 shadow-sm hover:shadow-md" : "p-5 shadow-md hover:shadow-lg hover:-translate-y-0.5"
       ].join(" ")}>
-        {article.model && (
-          <span className="absolute top-3 right-3 text-xs font-medium px-2 py-0.5 rounded-full
-                           bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300
-                           border border-blue-200 dark:border-blue-700/50">
-            {article.model}
-          </span>
-        )}
         {renderHeader()}
         {renderDescription()}
         {renderMetadata()}
