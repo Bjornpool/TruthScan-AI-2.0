@@ -73,11 +73,17 @@ export default function ChartsSection({
 
   useEffect(() => {
     if (!isClient || hasLoadedRef.current) return;
-    
+
     const el = chartsSectionRef.current;
     if (!el) return;
 
-    if (cachedCharts) {
+    // Traktuj cache jako ważny tylko gdy zawiera dane
+    const cacheIsValid = !!(
+      cachedCharts &&
+      (cachedCharts.barData.length > 0 || cachedCharts.emotionData.length > 0)
+    );
+
+    if (cacheIsValid) {
       console.log("✅ Używam cache dla wykresów");
       return;
     }
@@ -162,19 +168,27 @@ export default function ChartsSection({
   const effectiveEmotionData = cachedCharts?.emotionData ?? emotionData;
   const effectiveTotalSources = cachedCharts?.totalSources ?? totalSources;
 
-  const effectiveHasBars = cachedCharts
-    ? cachedCharts.barData.length > 0
-    : hasBars;
-  const effectiveHasEmos = cachedCharts
-    ? cachedCharts.emotionData.length > 0
-    : hasEmos;
+  // Warunek oparty wyłącznie na długości tablicy — wartości 0 nie blokują wykresu
+  const effectiveHasBars = effectiveBarData.length > 0;
+  const effectiveHasEmos = effectiveEmotionData.length > 0;
 
-  const effectiveChartsStarted = cachedCharts ? true : chartsStarted;
-  const effectiveChartsLoading = cachedCharts ? false : chartsLoading;
-  const effectiveProgressCount = cachedCharts
-    ? effectiveTotalSources
-    : progressCount;
-  const effectiveProgressPct = cachedCharts ? 100 : progressPct;
+  const cacheIsValid = !!(
+    cachedCharts &&
+    (cachedCharts.barData.length > 0 || cachedCharts.emotionData.length > 0)
+  );
+  const effectiveChartsStarted = cacheIsValid ? true : chartsStarted;
+  const effectiveChartsLoading = cacheIsValid ? false : chartsLoading;
+  const effectiveProgressCount = cacheIsValid ? effectiveTotalSources : progressCount;
+  const effectiveProgressPct = cacheIsValid ? 100 : progressPct;
+
+  console.log("[ChartsSection] render →", {
+    cachedCharts: !!cachedCharts,
+    barData: barData.length, emotionData: emotionData.length,
+    effectiveBarData: effectiveBarData.length, effectiveEmotionData: effectiveEmotionData.length,
+    effectiveHasBars, effectiveHasEmos,
+    effectiveChartsStarted, effectiveChartsLoading,
+    progressCount, effectiveProgressCount,
+  });
 
   const t = locales[language] ?? locales.pl;
 

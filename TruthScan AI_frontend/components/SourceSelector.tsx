@@ -45,7 +45,7 @@ export default function SourceSelector({ selectedSource, setSelectedSource, lang
       <optgroup label="🇳🇴 Norsk">
         <option value="NRK">NRK</option>
         <option value="VG">VG</option>
-        <option value="TV2">TV2</option>
+        <option value="E24">E24</option>
         <option value="Aftenposten">Aftenposten</option>
       </optgroup>
     </select>

@@ -15,7 +15,7 @@ import { useNewsCache, newsKey } from "../../app/stores/newsCache";
 const ALL_SOURCES = [
   "BBC", "CNN", "NYTimes", "Guardian", "AlJazeera",
   "Money", "PolsatNews", "TVN24", "SpidersWeb", "Bankier",
-  "NRK", "VG", "TV2", "Aftenposten",
+  "NRK", "VG", "E24", "Aftenposten",
 ] as const;
 
 export default function DashboardPage() {
@@ -37,7 +37,7 @@ export default function DashboardPage() {
 
   const handleRefresh = () => {
     ALL_SOURCES.forEach((src) => {
-      cache.del(newsKey(src, language));
+      cache.del(newsKey(src));
     });
     cache.del("dashboard:charts");
     setReloadKey((k) => k + 1);

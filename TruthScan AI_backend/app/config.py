@@ -36,7 +36,7 @@ NEWS_FEEDS = {
     # Norweskie
     "NRK":          "https://www.nrk.no/toppsaker.rss",
     "VG":           "https://www.vg.no/rss/feed/?limit=10",
-    "TV2":          "https://www.tv2.no/rss/alt",
+    "E24":          "https://e24.no/rss",
     "Aftenposten":  "https://www.aftenposten.no/rss",
 }
 

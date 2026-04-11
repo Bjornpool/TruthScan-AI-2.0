@@ -1,6 +1,10 @@
 /**
  * Hook pobierający listę newsów dla wybranego źródła.
  * Wykorzystuje cache po stronie klienta w celu ograniczenia liczby zapytań do API.
+ *
+ * Klucz cache zawiera tylko source i model — NIE lang.
+ * Etykiety sentymentu są tłumaczone po stronie frontendu przez useSentiment,
+ * więc zmiana języka UI nie wymusza ponownego pobierania artykułów.
  */
 
 import { useEffect, useState } from "react";
@@ -13,12 +17,14 @@ type Article = {
   summary: string;
   published: string;
   source: string;
-  sentiment: string;       
+  sentiment: string;
   fake_probability: number;
   sentiment_score?: number;
 };
 
 type NewsResponse = { source: string; articles: Article[] };
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 export function useCachedNews(source: string, lang: Lang = "pl", model: string = "roberta") {
   const [data, setData] = useState<Article[] | null>(null);
@@ -28,9 +34,9 @@ export function useCachedNews(source: string, lang: Lang = "pl", model: string =
 
   useEffect(() => {
     let mounted = true;
-    const key = newsKey(source, lang, model);
+    // Klucz cache bez lang — artykuły są language-agnostic po stronie cache
+    const key = newsKey(source, model);
 
-    // Odczyt danych z cache przed wykonaniem zapytania HTTP
     const cached = cache.get<Article[]>(key);
     if (cached) {
       setData(cached);
@@ -41,14 +47,16 @@ export function useCachedNews(source: string, lang: Lang = "pl", model: string =
     (async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/news/${encodeURIComponent(source)}?lang=${lang}&model=${model}`);
+        // Lang przekazywany do backendu (wpływa na format dat itp.),
+        // ale nie jest częścią klucza cache
+        const res = await fetch(
+          `${API_URL}/news/${encodeURIComponent(source)}?lang=${lang}&model=${model}`
+        );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json: NewsResponse = await res.json();
         const articles = json.articles ?? [];
         if (!mounted) return;
         setData(articles);
-
-        // Zapis danych w cache po poprawnym pobraniu
         cache.set(key, articles);
       } catch (e: any) {
         if (!mounted) return;
@@ -58,19 +66,19 @@ export function useCachedNews(source: string, lang: Lang = "pl", model: string =
       }
     })();
 
-    return () => {
-      // Zabezpieczenie przed aktualizacją stanu po odmontowaniu komponentu
-      mounted = false;
-    };
-  }, [source, lang, model]);
+    return () => { mounted = false; };
+  // lang pominięty z deps — zmiana języka nie triggeruje re-fetch
+  }, [source, model]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const refresh = async () => {
-    const key = newsKey(source, lang, model);
+    const key = newsKey(source, model);
     cache.del(key);
     setData(null);
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/news/${encodeURIComponent(source)}?lang=${lang}&model=${model}`);
+      const res = await fetch(
+        `${API_URL}/news/${encodeURIComponent(source)}?lang=${lang}&model=${model}`
+      );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json: NewsResponse = await res.json();
       const articles = json.articles ?? [];

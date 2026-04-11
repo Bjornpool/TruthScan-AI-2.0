@@ -20,7 +20,7 @@ interface Props {
 const ALL_SOURCES = [
 	"BBC", "CNN", "NYTimes", "Guardian", "AlJazeera",
 	"Money", "PolsatNews", "TVN24", "SpidersWeb", "Bankier",
-	"NRK", "VG", "TV2", "Aftenposten",
+	"NRK", "VG", "E24", "Aftenposten",
 ] as const;
 
 export default function SourceComparison({ language }: Props) {

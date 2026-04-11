@@ -71,7 +71,7 @@ const SOURCE_MAP: Record<string, string> = {
   bankier: "Bankier",
   nrk: "NRK",
   vg: "VG",
-  tv2: "TV2",
+  e24: "E24",
   aftenposten: "Aftenposten",
 };
 
@@ -97,15 +97,16 @@ function normalizeArticle(raw: any, sourceLabel: string): Article {
 export async function fetchOneSource(
   source: string,
   language: "pl" | "en" | "no" = "pl"
-): Promise<{ news?: NewsData; emotions: Emotions }> {
+): Promise<{ news?: NewsData; emotions: Emotions; articles: Article[] }> {
   const src = normalizeSource(source);
   const emotions: Emotions = {};
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30_000);
+    const timeoutId = setTimeout(() => controller.abort(), 45_000);
     const res = await fetch(
-      `http://127.0.0.1:8000/news/${src}?lang=${language}`,
+      `${apiBase}/news/${src}?lang=${language}`,
       { signal: controller.signal }
     );
     clearTimeout(timeoutId);
@@ -115,35 +116,22 @@ export async function fetchOneSource(
     const rawArticles = Array.isArray(data?.articles) ? (data.articles as any[]) : [];
     const articles = rawArticles.map((a) => normalizeArticle(a, src));
 
-    // DEBUG: logi pomocnicze używane podczas walidacji danych z backendu
-    console.log(`📊 Source: ${src}, Articles: ${articles.length}`);
-    articles.forEach((article, index) => {
-      console.log(`  Article ${index + 1}:`, {
-        title: article.title?.substring(0, 50) + '...',
-        sentiment: article.sentiment,
-        fake_probability: article.fake_probability
-      });
-    });
-
     if (!articles.length) {
-      return { news: { source: src, fake_news: "0" }, emotions };
+      return { news: { source: src, fake_news: "0" }, emotions, articles: [] };
     }
 
     const avgFake =
-      articles.reduce((sum: number, a: any) => sum + (a.fake_probability ?? 0), 0) /
-      (articles.length || 1);
+      articles.reduce((sum: number, a: any) => sum + (Number(a.fake_probability) || 0), 0) /
+      articles.length;
 
     for (const art of articles) {
       if (art.sentiment) emotions[art.sentiment] = (emotions[art.sentiment] ?? 0) + 1;
     }
 
-    // 🆕 DEBUG: sprawdźmy jakie emocje zebraliśmy
-    console.log(`🎭 Emotions for ${src}:`, emotions);
-
-    return { news: { source: src, fake_news: avgFake.toFixed(2) }, emotions };
+    return { news: { source: src, fake_news: avgFake.toFixed(2) }, emotions, articles };
   } catch (err) {
     console.warn(`❌ Błąd źródła: ${src}`, err);
-    return { news: { source: src, fake_news: "0" }, emotions };
+    return { news: { source: src, fake_news: "0" }, emotions, articles: [] };
   }
 }
 

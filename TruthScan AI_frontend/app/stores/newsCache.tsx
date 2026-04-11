@@ -84,7 +84,9 @@ export const useNewsCache = create<NewsCacheState>((set, get) => ({
   },
 }));
 
-// helper: klucz cache dla /news (uwzględnia model NLP)
-export const newsKey = (source: string, lang = "pl", model = "roberta") => `news:${source}:${lang}:${model}`;
+// helper: klucz cache dla /news — lang celowo pominięty, bo etykiety
+// sentymentu są tłumaczone po stronie frontendu przez useSentiment.
+// Zmiana języka UI nie powinna wymuszać ponownego pobrania artykułów.
+export const newsKey = (source: string, model = "roberta") => `news:${source}:${model}`;
 // helper: klucz cache dla /emotion-stats
 export const statsKey = (source: string) => `stats:${source}`;

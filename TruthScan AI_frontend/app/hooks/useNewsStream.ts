@@ -32,7 +32,8 @@ export function useNewsStream(source: string, lang: Lang = "pl", limit: number =
   useEffect(() => {
     if (!source) return;
 
-    const cacheKey = newsKey(source, lang);
+    // Klucz cache bez lang — etykiety tłumaczone przez useSentiment po stronie UI
+    const cacheKey = newsKey(source);
     const cached = cache.get<Article[]>(cacheKey);
 
     // Jeżeli dane są w cache, pomijamy połączenie SSE
@@ -100,7 +101,7 @@ export function useNewsStream(source: string, lang: Lang = "pl", limit: number =
       setState((s) => ({ ...s, loading: false }));
       // Zapis pełnego wyniku do cache po zakończeniu strumienia
       if (collected.length > 0) {
-        cache.set(cacheKey, collected);
+        cache.set(cacheKey, collected); // zapisane bez lang w kluczu
       }
       es.close();
     };
