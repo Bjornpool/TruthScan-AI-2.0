@@ -19,11 +19,11 @@ interface ProgressBarProps {
   language: Lang;
 }
 
-export default function ProgressBar({ 
-  progressCount, 
-  totalSources, 
-  progressPct, 
-  language 
+export default function ProgressBar({
+  progressCount,
+  totalSources,
+  progressPct,
+  language
 }: ProgressBarProps) {
   return (
     <div className="mb-3">

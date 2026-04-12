@@ -8,6 +8,7 @@
 import { useEffect, useState } from "react";
 import locales from "../../../lib/locales";
 import { useNewsCache, newsKey } from "../../stores/newsCache";
+import RotatingFact from "./RotatingFact";
 import type { Lang } from "../../../lib/types";
 
 interface Props {
@@ -119,6 +120,12 @@ export default function DashboardHeader({ language, hydrated }: Props) {
           </div>
         )}
       </div>
+
+      {hydrated && (
+        <div className="mt-3">
+          <RotatingFact language={language} />
+        </div>
+      )}
     </div>
   );
 }

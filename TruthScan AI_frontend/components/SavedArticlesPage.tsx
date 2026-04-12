@@ -12,6 +12,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Bookmark } from "lucide-react";
 import locales from "../lib/locales";
 import ArticleCard from "./ArticleCard";
 import { Article } from "../lib/fetchNews";
@@ -87,8 +88,9 @@ export default function SavedArticlesPage() {
   return (
     
     <div className="p-6 text-foreground bg-gradient-to-br from-blue-50 via to-indigo-500 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900">
-      <h1 className="text-2xl font-bold mb-4">
-        💾 {language === "pl" ? "Zapisane artykuły" : language === "no" ? "Lagrede artikler" : "Saved articles"}
+      <h1 className="flex items-center gap-2 text-2xl font-bold mb-4">
+        <Bookmark className="w-5 h-5 text-blue-500 shrink-0" />
+        {language === "pl" ? "Zapisane artykuły" : language === "no" ? "Lagrede artikler" : "Saved articles"}
       </h1>
 
       {savedArticles.length === 0 ? (

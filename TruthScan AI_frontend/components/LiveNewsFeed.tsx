@@ -13,6 +13,7 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Loader2 } from "lucide-react";
 import { useNewsStream } from "../app/hooks/useNewsStream";
 import type { Article } from "../lib/fetchNews";
 import ArticleCard from "./ArticleCard";
@@ -27,7 +28,7 @@ interface LiveNewsFeedProps {
 const TEXT_CONTENT = {
   pl: {
     title: "Strumień wiadomości",
-    loading: "⏳ Ładowanie danych...",
+    loading: "Ładowanie danych...",
     error: "❌ Błąd połączenia z serwerem",
     progress: (current: number, total: number) => `Przetworzono ${current} z ${total} artykułów`,
     complete: "✅ Wszystkie artykuły załadowane!",
@@ -37,7 +38,7 @@ const TEXT_CONTENT = {
   },
   en: {
     title: "News Stream",
-    loading: "⏳ Loading data...",
+    loading: "Loading data...",
     error: "❌ Server connection error",
     progress: (current: number, total: number) => `Processed ${current} of ${total} articles`,
     complete: "✅ All articles loaded!",
@@ -47,7 +48,7 @@ const TEXT_CONTENT = {
   },
   no: {
     title: "Nyhetsstrøm",
-    loading: "⏳ Laster inn data...",
+    loading: "Laster inn data...",
     error: "❌ Tilkoblingsfeil til serveren",
     progress: (current: number, total: number) => `Behandlet ${current} av ${total} artikler`,
     complete: "✅ Alle artikler lastet!",
@@ -108,7 +109,12 @@ export default function LiveNewsFeed({ source, language }: LiveNewsFeedProps) {
         📡 {t.title}: <span className="text-blue-600">{source}</span>
       </h2>
 
-      {loading && <p className="text-gray-500">{t.loading}</p>}
+      {loading && (
+        <p className="flex items-center gap-1.5 text-gray-500">
+          <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400 inline" />
+          {t.loading}
+        </p>
+      )}
       
       {!!error && progress < total && (
         <p className="text-red-500">{t.error}</p>

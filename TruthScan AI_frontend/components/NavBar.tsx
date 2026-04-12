@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
+import { Home, LayoutDashboard, Bookmark } from "lucide-react";
 import LanguageSwitcher from "./LanguageSwitcher";
 import DarkModeToggle from "./DarkModeToggle";
 
@@ -36,9 +37,9 @@ export default function NavBar() {
   }, [language]);
 
   const links = [
-    { href: "/",          labelPl: "Strona główna", labelEn: "Home",      labelNo: "Hjem",       icon: "🏠" },
-    { href: "/dashboard", labelPl: "Dashboard",     labelEn: "Dashboard", labelNo: "Dashbord",   icon: "📊" },
-    { href: "/saved",     labelPl: "Zapisane",      labelEn: "Saved",     labelNo: "Lagrede",    icon: "💾" },
+    { href: "/",          labelPl: "Strona główna", labelEn: "Home",      labelNo: "Hjem",     Icon: Home },
+    { href: "/dashboard", labelPl: "Dashboard",     labelEn: "Dashboard", labelNo: "Dashbord", Icon: LayoutDashboard },
+    { href: "/saved",     labelPl: "Zapisane",      labelEn: "Saved",     labelNo: "Lagrede",  Icon: Bookmark },
   ];
 
  return (
@@ -55,21 +56,14 @@ export default function NavBar() {
           </div>
 
           <div className="flex items-center gap-6 relative">
-            {links.map(({ href, labelPl, labelEn, labelNo, icon }) => {
+            {links.map(({ href, labelPl, labelEn, labelNo, Icon }) => {
               const active = pathname === href || (href !== "/" && pathname.startsWith(href));
               return (
                 <div key={href} className="relative">
                   <Link href={href} className="inline-flex items-center gap-1.5">
-  {icon && (
-    <span
-      aria-hidden="true"
-      className="text-[18px] leading-none inline-block translate-y-[1px]"
-    >
-      {icon}
-    </span>
-  )}
-  {language === "pl" ? labelPl : language === "no" ? labelNo : labelEn}
-</Link>
+                    <Icon className="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" />
+                    {language === "pl" ? labelPl : language === "no" ? labelNo : labelEn}
+                  </Link>
 
                   {active && (
                     <motion.div

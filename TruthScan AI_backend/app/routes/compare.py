@@ -71,6 +71,74 @@ ADAPTER_DESCRIPTIONS = {
 }
 
 
+CHART_COMMENT_PROMPT = {
+    "pl": (
+        "Na podstawie poniższych danych fake-news probability (0–100%) dla {n} źródeł mediów "
+        "napisz dokładnie 2–3 zdania komentarza analitycznego po polsku. "
+        "Wskaż źródło z najwyższym i najniższym wynikiem oraz co to może oznaczać dla czytelnika. "
+        "Bądź zwięzły i obiektywny. Pisz czystym tekstem — bez markdown, bez gwiazdek, bez list.\n\n"
+        "Dane:\n{rows}"
+    ),
+    "en": (
+        "Based on the following fake-news probability data (0–100%) for {n} media sources "
+        "write exactly 2–3 sentences of analytical commentary in English. "
+        "Identify the source with the highest and lowest score and what this might mean for readers. "
+        "Be concise and objective. Write in plain text — no markdown, no asterisks, no lists.\n\n"
+        "Data:\n{rows}"
+    ),
+    "no": (
+        "Basert på følgende fake-news sannsynlighetsdata (0–100 %) for {n} mediekilder "
+        "skriv nøyaktig 2–3 setninger med analytisk kommentar på norsk. "
+        "Pek på kilden med høyest og lavest score og hva dette kan bety for leseren. "
+        "Vær kortfattet og objektiv. Skriv i ren tekst — ingen markdown, ingen stjerner, ingen lister.\n\n"
+        "Data:\n{rows}"
+    ),
+}
+
+
+class ChartCommentRequest(BaseModel):
+    bars: list          # [{"label": "BBC", "value": 23.45}, ...]
+    lang: str = "pl"
+
+
+class ChartCommentResponse(BaseModel):
+    comment: str
+
+
+@router.post("/ai-chart-comment", response_model=ChartCommentResponse)
+def ai_chart_comment(request: ChartCommentRequest):
+    """Generuje krótki komentarz analityczny Claude do wykresu fake-news probability."""
+    if not request.bars:
+        raise HTTPException(status_code=422, detail="Brak danych wykresu.")
+
+    lang = request.lang if request.lang in CHART_COMMENT_PROMPT else "pl"
+
+    # Buduj czytelny opis danych (posortowany malejąco po value)
+    sorted_bars = sorted(request.bars, key=lambda b: b.get("value", 0), reverse=True)
+    rows = "\n".join(
+        f"  {b['label']}: {b.get('value', 0):.2f}%"
+        for b in sorted_bars
+        if b.get("label")
+    )
+    prompt = CHART_COMMENT_PROMPT[lang].format(n=len(sorted_bars), rows=rows)
+
+    if not ANTHROPIC_API_KEY:
+        return ChartCommentResponse(comment="[Brak klucza ANTHROPIC_API_KEY]")
+
+    try:
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=300,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        comment = message.content[0].text.strip() if message.content else ""
+    except Exception as e:
+        comment = f"[Błąd Claude API: {e}]"
+
+    return ChartCommentResponse(comment=comment)
+
+
 class CompareRequest(BaseModel):
     text: str
     title: str = ""

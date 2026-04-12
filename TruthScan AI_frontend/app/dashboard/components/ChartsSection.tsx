@@ -10,7 +10,7 @@
 
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import SourceSelector from "../../../components/SourceSelector";
 import EmotionalPieChart from "../../../components/EmotionalPieChart";
 import FakeNewsBarChart from "../../../components/FakeNewsBarChart";
@@ -43,7 +43,7 @@ export default function ChartsSection({
 }: Props) {
   const [isClient, setIsClient] = useState(false);
   const [cachedCharts, setCachedCharts] = useState<ChartsCache | null>(null);
-  
+
   const {
     barData,
     emotionData,
@@ -59,12 +59,38 @@ export default function ChartsSection({
   } = useDashboardCharts(language);
 
   const [showArticlesModal, setShowArticlesModal] = useState(false);
+  const [aiComment, setAiComment]               = useState<string | null>(null);
+  const [aiCommentLoading, setAiCommentLoading] = useState(false);
+  const aiCommentFiredRef = useRef(false);
+
   const chartsSectionRef = useRef<HTMLDivElement | null>(null);
-  const hasLoadedRef = useRef(false); 
+  const hasLoadedRef = useRef(false);
+
+  // ── Effective values ────────────────────────────────────────────────────────
+  // Live dane z hooka (subskrypcja Zustand) mają priorytet nad starym cache z localStorage.
+  // Dzięki temu zmiana artykułów (SSE/prefetch) natychmiast aktualizuje wykresy.
+  const effectiveBarData     = barData.length > 0 ? barData : (cachedCharts?.barData ?? []);
+  const effectiveEmotionData = emotionData.length > 0 ? emotionData : (cachedCharts?.emotionData ?? []);
+
+  // Warunek oparty wyłącznie na długości tablicy — wartości 0 nie blokują wykresu
+  const effectiveHasBars = effectiveBarData.length > 0;
+  const effectiveHasEmos = effectiveEmotionData.length > 0;
+
+  const cacheIsValid = !!(
+    cachedCharts &&
+    (cachedCharts.barData.length > 0 || cachedCharts.emotionData.length > 0)
+  );
+  const effectiveTotalSources   = cachedCharts?.totalSources ?? totalSources;
+  const effectiveChartsStarted  = cacheIsValid ? true  : chartsStarted;
+  const effectiveChartsLoading  = cacheIsValid ? false : chartsLoading;
+  const effectiveProgressCount  = cacheIsValid ? effectiveTotalSources : progressCount;
+  const effectiveProgressPct    = cacheIsValid ? 100   : progressPct;
+
+  // ── Effects ─────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     setIsClient(true);
-    
+
     import("../../../app/stores/newsCache").then(({ useNewsCache }) => {
       const cache = useNewsCache.getState();
       setCachedCharts(cache.get<ChartsCache>(CHARTS_CACHE_KEY));
@@ -77,19 +103,13 @@ export default function ChartsSection({
     const el = chartsSectionRef.current;
     if (!el) return;
 
-    // Traktuj cache jako ważny tylko gdy zawiera dane
-    const cacheIsValid = !!(
-      cachedCharts &&
-      (cachedCharts.barData.length > 0 || cachedCharts.emotionData.length > 0)
-    );
-
     if (cacheIsValid) {
       console.log("✅ Używam cache dla wykresów");
       return;
     }
 
     hasLoadedRef.current = true;
-    
+
     if ("IntersectionObserver" in window) {
       const io = new IntersectionObserver(
         (entries) => {
@@ -99,7 +119,7 @@ export default function ChartsSection({
             io.disconnect();
           }
         },
-        { threshold: 0.05, rootMargin: "200px 0px" } 
+        { threshold: 0.05, rootMargin: "200px 0px" }
       );
       io.observe(el);
       return () => io.disconnect();
@@ -110,7 +130,27 @@ export default function ChartsSection({
       }, 300);
       return () => clearTimeout(t);
     }
-  }, [isClient, cachedCharts, loadCharts]);
+  }, [isClient, cacheIsValid, loadCharts]);
+
+  // Generuj komentarz AI raz po załadowaniu danych wykresu słupkowego
+  useEffect(() => {
+    if (aiCommentFiredRef.current) return;
+    if (!isClient || effectiveChartsLoading || !effectiveHasBars || effectiveBarData.length === 0) return;
+
+    aiCommentFiredRef.current = true;
+    setAiCommentLoading(true);
+
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    fetch(`${apiBase}/ai-chart-comment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bars: effectiveBarData, lang: language }),
+    })
+      .then((r) => r.json())
+      .then((data) => setAiComment(data.comment ?? null))
+      .catch(() => setAiComment(null))
+      .finally(() => setAiCommentLoading(false));
+  }, [isClient, effectiveChartsLoading, effectiveHasBars, effectiveBarData, language]);
 
   useEffect(() => {
     if (!isClient || !chartsStarted || chartsLoading || chartsError || (!hasBars && !hasEmos)) {
@@ -121,7 +161,7 @@ export default function ChartsSection({
 
     import("../../../app/stores/newsCache").then(({ useNewsCache }) => {
       const cache = useNewsCache.getState();
-      
+
       const currentCache = cache.get<ChartsCache>(CHARTS_CACHE_KEY);
       const areDataEqual =
         JSON.stringify(currentCache?.barData) === JSON.stringify(barData) &&
@@ -129,13 +169,9 @@ export default function ChartsSection({
 
       if (areDataEqual) return;
 
-      const payload: ChartsCache = {
-        barData,
-        emotionData,
-        totalSources,
-      };
+      const payload: ChartsCache = { barData, emotionData, totalSources };
       cache.set(CHARTS_CACHE_KEY, payload);
-      setCachedCharts(payload); 
+      setCachedCharts(payload);
     });
   }, [
     isClient,
@@ -149,6 +185,7 @@ export default function ChartsSection({
     totalSources,
   ]);
 
+  // ── SSR skeleton ─────────────────────────────────────────────────────────────
   if (!isClient) {
     return (
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
@@ -163,23 +200,6 @@ export default function ChartsSection({
       </section>
     );
   }
-
-  const effectiveBarData = cachedCharts?.barData ?? barData;
-  const effectiveEmotionData = cachedCharts?.emotionData ?? emotionData;
-  const effectiveTotalSources = cachedCharts?.totalSources ?? totalSources;
-
-  // Warunek oparty wyłącznie na długości tablicy — wartości 0 nie blokują wykresu
-  const effectiveHasBars = effectiveBarData.length > 0;
-  const effectiveHasEmos = effectiveEmotionData.length > 0;
-
-  const cacheIsValid = !!(
-    cachedCharts &&
-    (cachedCharts.barData.length > 0 || cachedCharts.emotionData.length > 0)
-  );
-  const effectiveChartsStarted = cacheIsValid ? true : chartsStarted;
-  const effectiveChartsLoading = cacheIsValid ? false : chartsLoading;
-  const effectiveProgressCount = cacheIsValid ? effectiveTotalSources : progressCount;
-  const effectiveProgressPct = cacheIsValid ? 100 : progressPct;
 
   console.log("[ChartsSection] render →", {
     cachedCharts: !!cachedCharts,
@@ -269,7 +289,26 @@ export default function ChartsSection({
           {chartsError ? (
             <div className="text-sm text-red-400">{chartsError}</div>
           ) : effectiveHasBars ? (
-            <FakeNewsBarChart data={effectiveBarData} title={t.fakeNewsSources} />
+            <>
+              <FakeNewsBarChart data={effectiveBarData} title={t.fakeNewsSources} />
+
+              {/* Komentarz AI pod wykresem */}
+              {aiCommentLoading && (
+                <p className="mt-2 text-xs italic text-gray-400 dark:text-gray-500 animate-pulse">
+                  {language === "pl"
+                    ? "Generowanie analizy AI…"
+                    : language === "no"
+                    ? "Genererer AI-analyse…"
+                    : "Generating AI analysis…"}
+                </p>
+              )}
+              {aiComment && (
+                <div className="mt-3 rounded-lg bg-gray-200/70 dark:bg-gray-700/60 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                  <span className="font-semibold text-gray-800 dark:text-gray-200">✨ {language === "pl" ? "Analiza AI:" : language === "no" ? "AI-analyse:" : "AI Analysis:"}</span>{" "}
+                  {aiComment}
+                </div>
+              )}
+            </>
           ) : effectiveChartsLoading ? (
             <MiniSpinner
               text={

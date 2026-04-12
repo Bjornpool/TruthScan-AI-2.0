@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Bot } from "lucide-react";
 import locales from "../../../lib/locales";
 import type { Lang } from "../../../lib/types";
 
@@ -84,7 +85,7 @@ export default function ModelInfoSection({ language }: Props) {
         aria-expanded={open}
       >
         <span className="flex items-center gap-2 font-semibold text-gray-800 dark:text-gray-100">
-          <span className="text-lg">🤖</span>
+          <Bot className="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" />
           {t.modelsSection}
         </span>
         <span

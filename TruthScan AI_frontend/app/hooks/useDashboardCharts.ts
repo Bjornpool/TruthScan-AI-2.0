@@ -80,7 +80,7 @@ export function useDashboardCharts(language: Lang) {
       }
     }
 
-    if (barsMap.size === 0) return; // nic w cache — nie nadpisuj pustą tablicą
+if (barsMap.size === 0) return; // nic w cache — nie nadpisuj pustą tablicą
 
     const arr = Array.from(barsMap.entries())
       .map(([label, value]) => ({ label, value }))

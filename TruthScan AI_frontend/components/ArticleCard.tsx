@@ -11,6 +11,10 @@
 "use client";
 
 import React, { useState } from "react";
+import {
+  Clock, Newspaper, Minus, Smile, Frown,
+  AlertTriangle, ExternalLink, GitCompare, Bookmark,
+} from "lucide-react";
 import { Article } from "../lib/fetchNews";
 import { useArticleContent } from "../app/hooks/useArticleContent";
 import { useFavicon } from "../app/hooks/useFavicon";
@@ -39,7 +43,7 @@ export default function ArticleCard({
   onSave,
 }: ArticleCardProps) {
   const { label: sentimentLabel, color: sentimentColor } = useSentiment(article.sentiment || "", language);
-  const { faviconSrc, sourceInitial, hasFavicon, nextFavicon } = useFavicon(article); 
+  const { faviconSrc, sourceInitial, hasFavicon, nextFavicon } = useFavicon(article);
   const { fetchFullContent } = useArticleContent();
   const [isExporting, setIsExporting] = useState(false);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
@@ -52,14 +56,22 @@ export default function ArticleCard({
   const T = (pl: string, no: string, en: string) =>
     language === "pl" ? pl : language === "no" ? no : en;
 
+  // Ikona sentymentu oparta na przetłumaczonej etykiecie — zawsze spójna z wyświetlanym tekstem
+  const SentimentIcon = () => {
+    const s = sentimentLabel.toLowerCase();
+    if (s.includes("pos") || s.includes("pozyt")) return <Smile className="w-3.5 h-3.5 text-green-500 inline" />;
+    if (s.includes("neg") || s.includes("negat")) return <Frown className="w-3.5 h-3.5 text-red-400 inline" />;
+    return <Minus className="w-3.5 h-3.5 text-gray-400 inline" />;
+  };
+
   const handleExportPDF = async () => {
     if (isExporting) return;
-    
+
     setIsExporting(true);
     try {
       let contentToExport = article.summary || article.description || "";
-      
-      if (article.link && article.link.startsWith('http') && !fullContent) {
+
+      if (article.link && article.link.startsWith("http") && !fullContent) {
         setIsLoadingContent(true);
         try {
           const fetchedContent = await fetchFullContent(article.link);
@@ -89,7 +101,7 @@ export default function ArticleCard({
 
   const renderHeader = () => (
     <div className="flex items-start gap-3 mb-2">
-      {hasFavicon ? ( 
+      {hasFavicon ? (
         <img
           src={faviconSrc}
           alt={`${article.source} favicon`}
@@ -97,7 +109,7 @@ export default function ArticleCard({
           height={24}
           className="w-6 h-6 rounded-sm mt-1 ring-1 ring-black/10 dark:ring-white/10 bg-white object-contain"
           referrerPolicy="no-referrer"
-          onError={nextFavicon} 
+          onError={nextFavicon}
         />
       ) : (
         <div className="w-6 h-6 rounded-sm mt-1 bg-gray-200 dark:bg-gray-700 grid place-items-center text-xs font-semibold">
@@ -126,22 +138,37 @@ export default function ArticleCard({
 
   const renderMetadata = () => (
     <div className={[
-      "text-gray-500 dark:text-gray-400",
+      "text-gray-600 dark:text-gray-400",
       isCompact ? "text-xs space-y-0.5 mb-2" : "text-sm space-y-1 mb-3"
     ].join(" ")}>
       <p>
-        🕒 {T("Data", "Dato", "Date")}:{" "}
+        <Clock className="w-3.5 h-3.5 text-gray-400 inline mr-1" />
+        {T("Data", "Dato", "Date")}:{" "}
         <time suppressHydrationWarning>
           {article.published || T("Brak daty", "Ingen dato", "No date")}
         </time>
       </p>
-      <p>📰 {T("Źródło", "Kilde", "Source")}: {article.source || "-"}</p>
       <p>
-        💬 {T("Sentyment", "Sentimentanalyse", "Sentiment")}:{" "}
+        <Newspaper className="w-3.5 h-3.5 text-gray-400 inline mr-1" />
+        {T("Źródło", "Kilde", "Source")}: {article.source || "-"}
+      </p>
+      <p>
+        <SentimentIcon />{" "}
+        {T("Sentyment", "Sentimentanalyse", "Sentiment")}:{" "}
         <span className={sentimentColor}>{sentimentLabel}</span>
       </p>
       <p>
-        ❓ {T("Prawdopodobieństwo Fake News", "Sannsynlighet for falske nyheter", "Fake News Probability")}:{" "}
+        <span className="relative group cursor-help">
+          <AlertTriangle className="w-3.5 h-3.5 text-orange-400 inline" />
+          <span className="absolute bottom-full left-0 mb-1 hidden group-hover:block w-64 bg-gray-800 text-white text-xs rounded-lg p-2 z-50 shadow-lg pointer-events-none">
+            {T(
+              "Wynik modelu BART wskazujący na prawdopodobieństwo dezinformacji. Powyżej 50% — artykuł może być fake newsem.",
+              "BART-modellens score for sannsynlighet for feilinformasjon. Over 50% — artikkelen kan være falske nyheter.",
+              "BART model score indicating misinformation probability. Above 50% — the article may be fake news."
+            )}
+          </span>
+        </span>{" "}
+        {T("Prawdopodobieństwo Fake News", "Sannsynlighet for falske nyheter", "Fake News Probability")}:{" "}
         {typeof article.fake_probability === "number"
           ? `${article.fake_probability.toFixed(2)}%`
           : T("Brak danych", "Ingen data", "No data")}
@@ -159,18 +186,19 @@ export default function ArticleCard({
           href={article.link.startsWith("http") ? article.link : `https://${article.link}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-500 hover:text-blue-400 font-medium transition"
+          className="flex items-center gap-1 text-blue-500 hover:text-blue-400 hover:underline font-medium transition"
         >
-          🔗 {T("Pokaż artykuł", "Vis artikkel", "View article")}
+          <ExternalLink className="w-3.5 h-3.5 inline" />
+          {T("Pokaż artykuł", "Vis artikkel", "View article")}
         </a>
       )}
 
       <button
         onClick={() => setShowCompare(true)}
-        className="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300
-                   font-medium transition"
+        className="flex items-center gap-1 text-indigo-600 hover:text-indigo-500 hover:underline dark:text-indigo-400 dark:hover:text-indigo-300 font-medium transition cursor-pointer"
       >
-        🔬 {T("Porównaj modele", "Sammenlign modeller", "Compare models")}
+        <GitCompare className="w-3.5 h-3.5 inline" />
+        {T("Porównaj modele", "Sammenlign modeller", "Compare models")}
       </button>
 
       {savedView && (
@@ -178,14 +206,12 @@ export default function ArticleCard({
           onClick={handleExportPDF}
           disabled={isExporting || isLoadingContent}
           className={`text-purple-600 hover:text-purple-500 font-medium transition ${
-            (isExporting || isLoadingContent) ? 'opacity-50 cursor-not-allowed' : ''
+            (isExporting || isLoadingContent) ? "opacity-50 cursor-not-allowed" : "hover:underline cursor-pointer"
           }`}
         >
-          {isLoadingContent ? '⏳' : isExporting ? '📄' : '📄'} 
           {isLoadingContent
             ? T(" Pobieranie...", " Laster inn...", " Loading...")
-            : T(" Eksportuj PDF", " Eksporter til PDF", " Export PDF")
-          }
+            : T(" Eksportuj PDF", " Eksporter til PDF", " Export PDF")}
         </button>
       )}
 
@@ -200,16 +226,17 @@ export default function ArticleCard({
               onDelete?.(article.title);
             }
           }}
-          className="text-red-500 hover:text-red-400 font-medium transition"
+          className="text-red-500 hover:text-red-400 hover:underline font-medium transition cursor-pointer"
         >
           🗑️ {T("Usuń", "Slett", "Delete")}
         </button>
       ) : onSave ? (
         <button
           onClick={() => onSave(article)}
-          className="text-green-600 hover:text-green-500 font-medium transition"
+          className="flex items-center gap-1 text-green-600 hover:text-green-500 hover:underline font-medium transition cursor-pointer"
         >
-          💾 {T("Zapisz", "Lagre", "Save")}
+          <Bookmark className="w-3.5 h-3.5 inline" />
+          {T("Zapisz", "Lagre", "Save")}
         </button>
       ) : null}
     </div>

@@ -6,6 +6,11 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  Bot, Zap, Globe, BarChart2, Search, BookOpen,
+  CheckCircle, TrendingUp, AlertTriangle,
+} from "lucide-react";
+import type { LucideProps } from "lucide-react";
 import locales from "../lib/locales";
 import TipModal from "../app/TipModel";
 import { fetchAllNews } from "../lib/fetchNews";
@@ -82,7 +87,7 @@ export default function HomePage() {
       moreNo: "Vær oppmerksom på forfatteren og utgiveren. Sjekk om nettstedet har en 'Om oss'-seksjon, kontaktinformasjon og redaksjonell policy. Unngå anonyme blogger og nettsteder uten teaminformasjon. Legitime medier oppgir vanligvis sine data og har en gjennomsiktig eierskapsstruktur.",
       moreEn: "Pay attention to the author and publisher. Check if the site has an 'About us' section, contact details and editorial policy. Avoid anonymous blogs and sites without team information. Legitimate media usually provide their data and have transparent ownership structure.",
       link: { href: "https://demagog.org.pl/edukacja/", labelPl: "Demagog: Jak weryfikować źródła", labelNo: "Demagog: Slik verifiserer du kilder", labelEn: "Demagog: How to verify sources" },
-      icon: "🔍"
+      Icon: Search, iconClass: "w-5 h-5 text-blue-400",
     },
     {
       pl: "Analizuj emocjonalny język",
@@ -92,7 +97,7 @@ export default function HomePage() {
       moreNo: "Tekster fulle av utropstegn, STORE BOKSTAVER og harde epiteter manipulerer ofte følelser. Ekte nyheter prøver å være nøytrale. Vær oppmerksom på clickbait-overskrifter som lover sjokkerende avsløringer uten innhold.",
       moreEn: "Texts full of exclamation marks, ALL CAPS and harsh epithets often manipulate emotions. Real news tries to be neutral. Pay attention to clickbait headlines promising shocking revelations without substance.",
       link: { href: "https://www.snopes.com/collections/fact-checking-101/", labelPl: "Snopes: Podstawy fact-checkingu", labelNo: "Snopes: Grunnleggende fakta-sjekk", labelEn: "Snopes: Fact-checking basics" },
-      icon: "🎭"
+      Icon: BarChart2, iconClass: "w-5 h-5 text-orange-400",
     },
     {
       pl: "Weryfikuj w wielu źródłach",
@@ -102,7 +107,7 @@ export default function HomePage() {
       moreNo: "Ikke stol på én kilde. Sjekk samme informasjon i minst 2-3 pålitelige medier. Bruk søkemotorer med operatorer som 'site:.gov.no' eller 'site:.edu'. Sjekk publiseringsdatoen - gamle nyheter deles ofte som nye.",
       moreEn: "Don't rely on one source. Check the same information in at least 2-3 reliable media. Use search engines with operators like 'site:.gov' or 'site:.edu'. Check the publication date - old news is often shared as current.",
       link: { href: "https://factcheck.afp.com/", labelPl: "AFP Fact Check", labelNo: "AFP Fact Check", labelEn: "AFP Fact Check" },
-      icon: "📡"
+      Icon: CheckCircle, iconClass: "w-5 h-5 text-green-400",
     },
     {
       pl: "Sprawdź dowody i cytaty",
@@ -112,7 +117,7 @@ export default function HomePage() {
       moreNo: "Ekte artikler inneholder spesifikke data, statistikk, ekspertsitater og henvisninger til forskning. Falske nyheter opererer med generaliseringer og følelser. Sjekk om siterte personer faktisk eksisterer og ble korrekt sitert.",
       moreEn: "Real articles contain specific data, statistics, expert quotes and references to research. Fake news operates on generalizations and emotions. Check if quoted people actually exist and were correctly cited.",
       link: { href: "https://www.politifact.com/", labelPl: "PolitiFact: Weryfikacja faktów", labelNo: "PolitiFact: Faktaverifisering", labelEn: "PolitiFact: Fact verification" },
-      icon: "📊"
+      Icon: TrendingUp, iconClass: "w-5 h-5 text-purple-400",
     },
     {
       pl: "Uważaj na deepfakes i manipulacje",
@@ -122,7 +127,7 @@ export default function HomePage() {
       moreNo: "Vi møter stadig mer manipulerte bilder, videoer og lydopptak. Sjekk den originale kilden til materialet. Bruk verktøy for omvendt bildesøk. Vær oppmerksom på unaturlige ansiktsbevegelser i videoer.",
       moreEn: "We increasingly encounter edited photos, videos and audio recordings. Check the original source of the material. Use reverse image search tools. Pay attention to unnatural facial movements in videos.",
       link: { href: "https://euvsdisinfo.eu/", labelPl: "EU vs Disinfo: Walka z dezinformacją", labelNo: "EU vs Disinfo: Kamp mot desinformasjon", labelEn: "EU vs Disinfo: Fighting disinformation" },
-      icon: "🛸"
+      Icon: AlertTriangle, iconClass: "w-5 h-5 text-red-400",
     }
   ];
 
@@ -137,9 +142,17 @@ export default function HomePage() {
     { href: "https://www.factcheck.org/", label: "FactCheck.org", tag: "EN",  },
   ];
 
-  const features = [
+  type Feature = {
+    Icon: React.ComponentType<LucideProps>;
+    iconClass: string;
+    title: string;
+    description: string;
+  };
+
+  const features: Feature[] = [
     {
-      icon: "🤖",
+      Icon: Bot,
+      iconClass: "w-8 h-8 text-blue-500",
       title: T("Analiza AI", "AI-analyse", "AI Analysis"),
       description: T(
         "Zaawansowane modele NLP do analizy sentymentu i wykrywania dezinformacji",
@@ -148,7 +161,8 @@ export default function HomePage() {
       )
     },
     {
-      icon: "⚡",
+      Icon: Zap,
+      iconClass: "w-8 h-8 text-yellow-500",
       title: T("Analiza w Czasie Rzeczywistym", "Sanntidsanalyse", "Real-time Analysis"),
       description: T(
         "Natychmiastowe przetwarzanie najnowszych wiadomości ze strumieni RSS",
@@ -157,7 +171,8 @@ export default function HomePage() {
       )
     },
     {
-      icon: "🌐",
+      Icon: Globe,
+      iconClass: "w-8 h-8 text-green-500",
       title: T("Wiele Źródeł", "Flere kilder", "Multiple Sources"),
       description: T(
         "Porównuj wiadomości z 10+ zaufanych źródeł krajowych i międzynarodowych",
@@ -166,7 +181,8 @@ export default function HomePage() {
       )
     },
     {
-      icon: "📊",
+      Icon: BarChart2,
+      iconClass: "w-8 h-8 text-purple-500",
       title: T("Dashboard z Wykresami", "Dashbord med diagrammer", "Chart Dashboard"),
       description: T(
         "Interaktywne wizualizacje danych i statystyki emocjonalne",
@@ -281,7 +297,7 @@ export default function HomePage() {
               transition={{ delay: index * 0.1 }}
               className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-6 rounded-xl shadow-lg border border-gray-200/50 dark:border-gray-700/50"
             >
-              <div className="text-4xl mb-4">{feature.icon}</div>
+              <div className="mb-4"><feature.Icon className={feature.iconClass} /></div>
               <h3 className="text-lg font-bold mb-3 text-gray-800 dark:text-gray-100">
                 {feature.title}
               </h3>
@@ -299,8 +315,9 @@ export default function HomePage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
-              {T("🔍 Jak rozpoznać fake newsy?", "🔍 Hvordan gjenkjenne falske nyheter?", "🔍 How to Spot Fake News")}
+            <h2 className="flex items-center gap-2 text-2xl font-bold text-gray-800 dark:text-gray-100">
+              <Search className="w-6 h-6 text-blue-500 shrink-0" />
+              {T("Jak rozpoznać fake newsy?", "Hvordan gjenkjenne falske nyheter?", "How to Spot Fake News")}
             </h2>
             
             <div className="space-y-3">
@@ -310,7 +327,7 @@ export default function HomePage() {
                   onClick={() => setActiveTip(i)}
                   className="w-full flex items-start gap-3 p-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg shadow hover:shadow-md transition-all text-left border border-gray-200/50 dark:border-gray-700/50"
                 >
-                  <div className="text-xl">{tip.icon}</div>
+                  <tip.Icon className={tip.iconClass} />
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-800 dark:text-gray-100">
                       {language === "pl" ? tip.pl : language === "no" ? tip.no : tip.en}
@@ -325,8 +342,9 @@ export default function HomePage() {
           </div>
 
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
-              {T("📚 Polecane źródła", "📚 Anbefalte kilder", "📚 Recommended Sources")}
+            <h2 className="flex items-center gap-2 text-2xl font-bold text-gray-800 dark:text-gray-100">
+              <BookOpen className="w-6 h-6 text-green-500 shrink-0" />
+              {T("Polecane źródła", "Anbefalte kilder", "Recommended Sources")}
             </h2>
             
             <div className="grid grid-cols-1 gap-3">
