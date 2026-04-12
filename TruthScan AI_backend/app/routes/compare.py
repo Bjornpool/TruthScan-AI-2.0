@@ -139,6 +139,74 @@ def ai_chart_comment(request: ChartCommentRequest):
     return ChartCommentResponse(comment=comment)
 
 
+EMOTION_COMMENT_PROMPT = {
+    "pl": (
+        "Na podstawie danych o emocjach w artykułach: "
+        "Pozytywne: {positive}, Neutralne: {neutral}, Negatywne: {negative} "
+        "(łącznie {total} artykułów) — napisz 2–3 zdania komentarza analitycznego po polsku. "
+        "Co dominujący sentyment mówi o obecnym klimacie medialnym? "
+        "Bądź zwięzły i obiektywny. Pisz czystym tekstem — bez markdown, bez gwiazdek, bez list."
+    ),
+    "en": (
+        "Based on emotion data from articles: "
+        "Positive: {positive}, Neutral: {neutral}, Negative: {negative} "
+        "(total {total} articles) — write 2–3 sentences of analytical commentary in English. "
+        "What does the dominant sentiment say about the current media climate? "
+        "Be concise and objective. Write in plain text — no markdown, no asterisks, no lists."
+    ),
+    "no": (
+        "Basert på emosjonelle data fra artikler: "
+        "Positive: {positive}, Nøytrale: {neutral}, Negative: {negative} "
+        "(totalt {total} artikler) — skriv 2–3 setninger med analytisk kommentar på norsk. "
+        "Hva sier det dominerende sentimentet om det nåværende mediaklimaet? "
+        "Vær kortfattet og objektiv. Skriv i ren tekst — ingen markdown, ingen stjerner, ingen lister."
+    ),
+}
+
+
+class EmotionCommentRequest(BaseModel):
+    positive: int = 0
+    neutral: int = 0
+    negative: int = 0
+    lang: str = "pl"
+
+
+class EmotionCommentResponse(BaseModel):
+    comment: str
+
+
+@router.post("/ai-emotion-comment", response_model=EmotionCommentResponse)
+def ai_emotion_comment(request: EmotionCommentRequest):
+    """Generuje krótki komentarz analityczny Claude do wykresu emocji."""
+    total = request.positive + request.neutral + request.negative
+    if total == 0:
+        raise HTTPException(status_code=422, detail="Brak danych emocji.")
+
+    lang = request.lang if request.lang in EMOTION_COMMENT_PROMPT else "pl"
+    prompt = EMOTION_COMMENT_PROMPT[lang].format(
+        positive=request.positive,
+        neutral=request.neutral,
+        negative=request.negative,
+        total=total,
+    )
+
+    if not ANTHROPIC_API_KEY:
+        return EmotionCommentResponse(comment="[Brak klucza ANTHROPIC_API_KEY]")
+
+    try:
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=300,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        comment = message.content[0].text.strip() if message.content else ""
+    except Exception as e:
+        comment = f"[Błąd Claude API: {e}]"
+
+    return EmotionCommentResponse(comment=comment)
+
+
 class CompareRequest(BaseModel):
     text: str
     title: str = ""

@@ -63,6 +63,10 @@ export default function ChartsSection({
   const [aiCommentLoading, setAiCommentLoading] = useState(false);
   const aiCommentFiredRef = useRef(false);
 
+  const [aiEmotionComment, setAiEmotionComment]               = useState<string | null>(null);
+  const [aiEmotionCommentLoading, setAiEmotionCommentLoading] = useState(false);
+  const aiEmotionCommentFiredRef = useRef(false);
+
   const chartsSectionRef = useRef<HTMLDivElement | null>(null);
   const hasLoadedRef = useRef(false);
 
@@ -131,6 +135,30 @@ export default function ChartsSection({
       return () => clearTimeout(t);
     }
   }, [isClient, cacheIsValid, loadCharts]);
+
+  // Generuj komentarz AI raz po załadowaniu danych wykresu emocji
+  useEffect(() => {
+    if (aiEmotionCommentFiredRef.current) return;
+    if (!isClient || effectiveChartsLoading || !effectiveHasEmos || effectiveEmotionData.length === 0) return;
+
+    aiEmotionCommentFiredRef.current = true;
+    setAiEmotionCommentLoading(true);
+
+    const pos = effectiveEmotionData.find((e) => e.name === "POSITIVE")?.value ?? 0;
+    const neu = effectiveEmotionData.find((e) => e.name === "NEUTRAL")?.value ?? 0;
+    const neg = effectiveEmotionData.find((e) => e.name === "NEGATIVE")?.value ?? 0;
+
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    fetch(`${apiBase}/ai-emotion-comment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ positive: pos, neutral: neu, negative: neg, lang: language }),
+    })
+      .then((r) => r.json())
+      .then((data) => setAiEmotionComment(data.comment ?? null))
+      .catch(() => setAiEmotionComment(null))
+      .finally(() => setAiEmotionCommentLoading(false));
+  }, [isClient, effectiveChartsLoading, effectiveHasEmos, effectiveEmotionData, language]);
 
   // Generuj komentarz AI raz po załadowaniu danych wykresu słupkowego
   useEffect(() => {
@@ -252,16 +280,33 @@ export default function ChartsSection({
             {chartsError ? (
               <div className="text-sm text-red-400">{chartsError}</div>
             ) : effectiveHasEmos ? (
-              <EmotionalPieChart
-                data={effectiveEmotionData}
-                title={
-                  language === "pl"
-                    ? "Emocje w artykułach"
-                    : language === "no"
-                    ? "Følelser i artikler"
-                    : "Emotions in Articles"
-                }
-              />
+              <>
+                <EmotionalPieChart
+                  data={effectiveEmotionData}
+                  title={
+                    language === "pl"
+                      ? "Emocje w artykułach"
+                      : language === "no"
+                      ? "Følelser i artikler"
+                      : "Emotions in Articles"
+                  }
+                />
+                {aiEmotionCommentLoading && (
+                  <p className="mt-2 text-xs italic text-gray-400 dark:text-gray-500 animate-pulse">
+                    {language === "pl"
+                      ? "Generowanie analizy AI…"
+                      : language === "no"
+                      ? "Genererer AI-analyse…"
+                      : "Generating AI analysis…"}
+                  </p>
+                )}
+                {aiEmotionComment && (
+                  <div className="mt-3 rounded-lg bg-gray-200/70 dark:bg-gray-700/60 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">✨ {language === "pl" ? "Analiza AI:" : language === "no" ? "AI-analyse:" : "AI Analysis:"}</span>{" "}
+                    {aiEmotionComment}
+                  </div>
+                )}
+              </>
             ) : effectiveChartsLoading ? (
               <MiniSpinner
                 text={

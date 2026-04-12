@@ -179,7 +179,8 @@ export async function fetchAllNews(
   let processed = 0;
 
   await runWithConcurrency(normalized, concurrency, async (source) => {
-    const url = `http://127.0.0.1:8000/news/${encodeURIComponent(source)}?lang=${language}`;
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    const url = `${apiBase}/news/${encodeURIComponent(source)}?lang=${language}`;
 
     try {
       const res = await fetch(url, { cache: "no-store" });
