@@ -16,6 +16,7 @@ import { Bookmark } from "lucide-react";
 import locales from "../lib/locales";
 import ArticleCard from "./ArticleCard";
 import { Article } from "../lib/fetchNews";
+import { getSavedArticles, deleteSavedArticle } from "../lib/savedArticles";
 import type { Lang } from "../lib/types";
 
 export default function SavedArticlesPage() {
@@ -55,9 +56,8 @@ export default function SavedArticlesPage() {
 
   const fetchSavedArticles = async () => {
     try {
-      const response = await fetch("http://127.0.0.1:8000/saved-articles");
-      const result = await response.json();
-      setSavedArticles(result);
+      const articles = await getSavedArticles();
+      setSavedArticles(articles);
     } catch (error) {
       console.error("❌ Błąd pobierania artykułów:", error);
     }
@@ -65,21 +65,12 @@ export default function SavedArticlesPage() {
 
   const handleDelete = async (title: string) => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/delete-article", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title }),
-      });
-
-      if (res.ok) {
-        setSavedArticles((prev) => prev.filter((a) => a.title !== title));
-        alert(language === "pl" ? "🗑️ Artykuł usunięty." : language === "no" ? "🗑️ Artikkelen ble slettet." : "🗑️ Article deleted.");
-      } else {
-        alert(language === "pl" ? "❌ Błąd usuwania." : language === "no" ? "❌ Sletting mislyktes." : "❌ Delete failed.");
-      }
+      await deleteSavedArticle(title);
+      setSavedArticles((prev) => prev.filter((a) => a.title !== title));
+      alert(language === "pl" ? "🗑️ Artykuł usunięty." : language === "no" ? "🗑️ Artikkelen ble slettet." : "🗑️ Article deleted.");
     } catch (err) {
       console.error("❌ Delete error:", err);
-      alert(language === "pl" ? "❌ Błąd połączenia." : language === "no" ? "❌ Tilkoblingsfeil." : "❌ Connection error.");
+      alert(language === "pl" ? "❌ Błąd usuwania." : language === "no" ? "❌ Sletting mislyktes." : "❌ Delete failed.");
     }
   };
 

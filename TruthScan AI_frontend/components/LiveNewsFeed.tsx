@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { useNewsStream } from "../app/hooks/useNewsStream";
 import type { Article } from "../lib/fetchNews";
+import { saveArticle } from "../lib/savedArticles";
 import ArticleCard from "./ArticleCard";
 
 import type { Lang } from "../lib/types";
@@ -81,22 +82,11 @@ export default function LiveNewsFeed({ source, language }: LiveNewsFeedProps) {
 
   const handleSave = async (article: Article) => {
     try {
-      const response = await fetch("http://127.0.0.1:8000/save-article", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(article),
-      });
-      
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        alert(`${t.saveError}: ${err.detail || response.statusText}`);
-        return;
-      }
-      
+      await saveArticle(article);
       alert(t.saveSuccess);
-    } catch (err) {
+    } catch (err: any) {
       console.error("❌ Save error:", err);
-      alert(t.connectionError);
+      alert(`❌ Supabase error: ${err?.message ?? JSON.stringify(err)}`);
     }
   };
 
