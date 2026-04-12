@@ -11,7 +11,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Bookmark } from "lucide-react";
 import locales from "../lib/locales";
 import ArticleCard from "./ArticleCard";
@@ -76,6 +76,40 @@ export default function SavedArticlesPage() {
 
   const t = locales[language] ?? locales.pl;
 
+  // Buduje etykietę daty separatora w zależności od języka
+  function dateSeparatorLabel(isoDate: string, lang: Lang): string {
+    const d = new Date(isoDate);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    const sameDay = (a: Date, b: Date) =>
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate();
+
+    if (sameDay(d, today)) {
+      return lang === "pl" ? "Dziś" : lang === "no" ? "I dag" : "Today";
+    }
+    if (sameDay(d, yesterday)) {
+      return lang === "pl" ? "Wczoraj" : lang === "no" ? "I går" : "Yesterday";
+    }
+
+    if (lang === "pl") {
+      return d.toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" });
+    }
+    if (lang === "no") {
+      return d.toLocaleDateString("nb-NO", { day: "numeric", month: "long", year: "numeric" });
+    }
+    return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  }
+
+  // Wylicza klucz dnia (YYYY-MM-DD) dla danego created_at
+  function dayKey(isoDate?: string): string {
+    if (!isoDate) return "unknown";
+    return new Date(isoDate).toISOString().slice(0, 10);
+  }
+
   return (
     
     <div className="p-6 text-foreground bg-gradient-to-br from-blue-50 via to-indigo-500 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900">
@@ -89,16 +123,40 @@ export default function SavedArticlesPage() {
           {language === "pl" ? "Brak zapisanych artykułów." : language === "no" ? "Ingen lagrede artikler." : "No saved articles."}
         </p>
       ) : (
-        savedArticles.map((article, index) => (
-          <ArticleCard
-            key={index}
-            article={article}
-            language={language}
-            locales={locales}
-            onDelete={handleDelete}
-            savedView={true} 
-          />
-        ))
+        (() => {
+          const elements: React.ReactNode[] = [];
+          let lastDay = "";
+
+          savedArticles.forEach((article, index) => {
+            const day = dayKey(article.created_at);
+            if (day !== lastDay) {
+              lastDay = day;
+              const label = article.created_at
+                ? dateSeparatorLabel(article.created_at, language)
+                : (language === "pl" ? "Nieznana data" : language === "no" ? "Ukjent dato" : "Unknown date");
+              elements.push(
+                <div
+                  key={`sep-${day}`}
+                  className="text-xs text-gray-400 font-medium uppercase tracking-wide py-2 px-1 border-b border-gray-200 dark:border-gray-700 mb-2"
+                >
+                  {label}
+                </div>
+              );
+            }
+            elements.push(
+              <ArticleCard
+                key={article.id ?? index}
+                article={article}
+                language={language}
+                locales={locales}
+                onDelete={handleDelete}
+                savedView={true}
+              />
+            );
+          });
+
+          return elements;
+        })()
       )}
     </div>
   );

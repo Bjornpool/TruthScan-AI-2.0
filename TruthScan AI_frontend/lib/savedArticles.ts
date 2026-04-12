@@ -59,6 +59,7 @@ export async function getSavedArticles(): Promise<Article[]> {
     fake_probability: row.fake_probability,
     publishedAt:      row.published_at,
     published:        row.published_at,
+    created_at:       row.created_at,
   }));
 }
 
