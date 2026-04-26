@@ -1,6 +1,3 @@
 {
-  "buildCommand": "cd 'TruthScan AI_frontend' && npm run build",
-  "outputDirectory": "TruthScan AI_frontend/.next",
-  "installCommand": "cd 'TruthScan AI_frontend' && npm install",
-  "framework": "nextjs"
+  "rootDirectory": "TruthScan AI_frontend"
 }
