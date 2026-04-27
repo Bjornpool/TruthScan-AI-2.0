@@ -183,7 +183,10 @@ export async function fetchAllNews(
     const url = `${apiBase}/news/${encodeURIComponent(source)}?lang=${language}`;
 
     try {
-      const res = await fetch(url, { cache: "no-store" });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60_000);
+      const res = await fetch(url, { cache: "no-store", signal: controller.signal });
+      clearTimeout(timeoutId);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       const data = await res.json();
