@@ -61,12 +61,17 @@ const i18n = {
   pl: {
     title:       "Benchmark modeli NLP",
     subtitle:    "Porównanie czasu inferencji, rozkładu sentymentów i prawdopodobieństwa fake newsów",
+    intro:       "Benchmark porównuje cztery modele NLP (RoBERTa, XLM-RoBERTa, NorBERT 3, HerBERT) na artykułach w trzech językach: polskim, norweskim i angielskim. Każdy model analizuje 8 artykułów per język — łącznie 96 analiz NLP. Wyniki pokazują czas inferencji, rozkład sentymentu oraz prawdopodobieństwo dezinformacji.",
     runBtn:      "Uruchom benchmark",
     running:     "Trwa benchmark… (może potrwać 2–3 minuty)",
     chart1:      "Czasy inferencji (ms)",
+    chart1Desc:  "Niższy wynik oznacza szybszy model. Pierwsze uruchomienie modelu może być wolniejsze ze względu na ładowanie do pamięci.",
     chart2:      "Rozkład sentymentów",
+    chart2Desc:  "Rozkład klasyfikacji sentymentu dla wszystkich artykułów testowych. Model dominujący w jednej kategorii może wskazywać na ograniczenia zero-shot.",
     chart3:      "Prawdopodobieństwo Fake News (%)",
+    chart3Desc:  "Prawdopodobieństwo dezinformacji obliczane przez model BART jako wspólny baseline dla wszystkich modeli i języków.",
     tableTitle:  "Szczegółowe wyniki",
+    tableDesc:   "Kliknij nazwę modelu, aby dowiedzieć się więcej",
     colModel:    "Model",
     colLang:     "Język",
     colSamples:  "Próbki",
@@ -83,12 +88,17 @@ const i18n = {
   en: {
     title:       "NLP Model Benchmark",
     subtitle:    "Comparison of inference time, sentiment distribution and fake news probability",
+    intro:       "The benchmark compares four NLP models (RoBERTa, XLM-RoBERTa, NorBERT 3, HerBERT) on articles in three languages: Polish, Norwegian and English. Each model analyses 8 articles per language — 96 NLP inferences in total. Results show inference time, sentiment distribution and misinformation probability.",
     runBtn:      "Run benchmark",
     running:     "Running benchmark… (may take 2–3 minutes)",
     chart1:      "Inference time (ms)",
+    chart1Desc:  "Lower score means a faster model. The first model run may be slower due to loading into memory.",
     chart2:      "Sentiment distribution",
+    chart2Desc:  "Sentiment classification distribution for all test articles. A model dominating one category may indicate zero-shot limitations.",
     chart3:      "Fake News probability (%)",
+    chart3Desc:  "Misinformation probability computed by the BART model as a shared baseline across all models and languages.",
     tableTitle:  "Detailed results",
+    tableDesc:   "Click a model name to learn more",
     colModel:    "Model",
     colLang:     "Language",
     colSamples:  "Samples",
@@ -105,12 +115,17 @@ const i18n = {
   no: {
     title:       "NLP-modell benchmark",
     subtitle:    "Sammenligning av inferenstid, sentimentfordeling og sannsynlighet for falske nyheter",
+    intro:       "Benchmarken sammenligner fire NLP-modeller (RoBERTa, XLM-RoBERTa, NorBERT 3, HerBERT) på artikler på tre språk: polsk, norsk og engelsk. Hver modell analyserer 8 artikler per språk — totalt 96 NLP-analyser. Resultatene viser inferenstid, sentimentfordeling og sannsynlighet for desinformasjon.",
     runBtn:      "Kjør benchmark",
     running:     "Kjører benchmark… (kan ta 2–3 minutter)",
     chart1:      "Inferenstid (ms)",
+    chart1Desc:  "Lavere score betyr en raskere modell. Første kjøring av modellen kan være tregere på grunn av innlasting i minnet.",
     chart2:      "Sentimentfordeling",
+    chart2Desc:  "Sentimentklassifiseringsfordeling for alle testartikler. En modell som dominerer én kategori kan indikere zero-shot-begrensninger.",
     chart3:      "Sannsynlighet for falske nyheter (%)",
+    chart3Desc:  "Desinformasjonssannsynlighet beregnet av BART-modellen som felles baseline for alle modeller og språk.",
     tableTitle:  "Detaljerte resultater",
+    tableDesc:   "Klikk et modellnavn for å lære mer",
     colModel:    "Modell",
     colLang:     "Språk",
     colSamples:  "Prøver",
@@ -222,6 +237,11 @@ export default function BenchmarkPage() {
           <p className="text-gray-500 dark:text-gray-400 max-w-xl mx-auto text-sm">{t.subtitle}</p>
         </div>
 
+        {/* Intro */}
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl px-6 py-4 text-sm text-gray-700 dark:text-gray-300 leading-relaxed max-w-3xl mx-auto">
+          {t.intro}
+        </div>
+
         {/* Run button */}
         <div className="flex justify-center">
           <button
@@ -268,6 +288,7 @@ export default function BenchmarkPage() {
                   ))}
                 </BarChart>
               </ResponsiveContainer>
+              <p className="mt-3 text-sm text-gray-400 dark:text-gray-500 italic">{t.chart1Desc}</p>
             </section>
 
             {/* Chart 2 — sentiment distribution */}
@@ -288,6 +309,7 @@ export default function BenchmarkPage() {
                        name={(t.sentLabels as any).negative} />
                 </BarChart>
               </ResponsiveContainer>
+              <p className="mt-3 text-sm text-gray-400 dark:text-gray-500 italic">{t.chart2Desc}</p>
             </section>
 
             {/* Chart 3 — fake probability */}
@@ -302,12 +324,22 @@ export default function BenchmarkPage() {
                   <Bar dataKey="value" fill="#f59e0b" radius={[4, 4, 0, 0]} name={t.chart3} />
                 </BarChart>
               </ResponsiveContainer>
+              <p className="mt-3 text-sm text-gray-400 dark:text-gray-500 italic">{t.chart3Desc}</p>
             </section>
 
             {/* Table */}
             <section className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 space-y-1">
                 <h2 className="text-lg font-semibold">{t.tableTitle}</h2>
+                <p className="text-sm text-gray-400 dark:text-gray-500">
+                  {t.tableDesc} —{" "}
+                  {["roberta", "xlm-roberta", "herbert", "norbert"].map((m, i, arr) => (
+                    <span key={m}>
+                      <a href="/dashboard#modele" className="text-blue-500 hover:underline">{m}</a>
+                      {i < arr.length - 1 ? ", " : ""}
+                    </span>
+                  ))}
+                </p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
