@@ -109,11 +109,9 @@ def _extract_pipeline_result(adapter_name: str, raw: Any) -> Dict[str, Any]:
       - [{"label": ..., "score": ...}]            (return_all_scores=False)
       - [[{"label": ..., "score": ...}, ...]]      (return_all_scores=True / top_k=None)
     """
-    print(f"[DEBUG] {adapter_name}: raw = {raw!r}")
     try:
         item = raw[0]
-    except (IndexError, TypeError) as exc:
-        print(f"[DEBUG] {adapter_name}: raw[0] failed: {exc}")
+    except (IndexError, TypeError):
         return {"label": "", "score": 0.0}
 
     if isinstance(item, dict):
@@ -121,14 +119,11 @@ def _extract_pipeline_result(adapter_name: str, raw: Any) -> Dict[str, Any]:
     elif isinstance(item, list):
         # return_all_scores=True zwraca listę list — bierzemy element o najwyższym score
         if not item:
-            print(f"[DEBUG] {adapter_name}: item jest pustą listą")
             return {"label": "", "score": 0.0}
         result = max(item, key=lambda x: x.get("score", 0.0))
     else:
-        print(f"[DEBUG] {adapter_name}: nieoczekiwany typ item: {type(item)!r}, raw={raw!r}")
         return {"label": "", "score": 0.0}
 
-    print(f"[DEBUG] {adapter_name}: extracted = {result!r}")
     return result
 
 

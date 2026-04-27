@@ -231,7 +231,7 @@ export default function HomePage() {
           className="flex justify-center gap-8 py-4"
         >
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">10+</div>
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">14</div>
             <div className="text-sm text-gray-600 dark:text-gray-400">
               {T("Źródeł", "Kilder", "Sources")}
             </div>

@@ -267,15 +267,6 @@ export default function ChartsSection({
           </div>
 
           <div className="min-h-[320px] rounded-lg bg-gray-100 p-4 shadow dark:bg-gray-800">
-            {effectiveChartsStarted && (
-              <ProgressBar
-                progressCount={effectiveProgressCount}
-                totalSources={effectiveTotalSources}
-                progressPct={effectiveProgressPct}
-                language={language}
-              />
-            )}
-
             {chartsError ? (
               <div className="text-sm text-red-400">{chartsError}</div>
             ) : effectiveHasEmos ? (

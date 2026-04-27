@@ -126,28 +126,31 @@ export default function ArticleCard({
     </div>
   );
 
-  const renderDescription = () => (
-    <p className={[
-      "text-gray-700 dark:text-gray-300",
-      isCompact ? "text-sm line-clamp-3 mb-2" : "mb-3"
-    ].join(" ")}>
-      {article.summary || article.description ||
-        T("Brak opisu", "Ingen beskrivelse", "No description")}
-    </p>
-  );
+  const renderDescription = () => {
+    const desc = article.summary || article.description || "";
+    if (!desc) return null;
+    return (
+      <p className={[
+        "text-gray-700 dark:text-gray-300",
+        isCompact ? "text-sm line-clamp-3 mb-2" : "mb-3"
+      ].join(" ")}>
+        {desc}
+      </p>
+    );
+  };
 
   const renderMetadata = () => (
     <div className={[
       "text-gray-600 dark:text-gray-400",
       isCompact ? "text-xs space-y-0.5 mb-2" : "text-sm space-y-1 mb-3"
     ].join(" ")}>
-      <p>
-        <Clock className="w-3.5 h-3.5 text-gray-400 inline mr-1" />
-        {T("Data", "Dato", "Date")}:{" "}
-        <time suppressHydrationWarning>
-          {article.published || T("Brak daty", "Ingen dato", "No date")}
-        </time>
-      </p>
+      {article.published && (
+        <p>
+          <Clock className="w-3.5 h-3.5 text-gray-400 inline mr-1" />
+          {T("Data", "Dato", "Date")}:{" "}
+          <time suppressHydrationWarning>{article.published}</time>
+        </p>
+      )}
       <p>
         <Newspaper className="w-3.5 h-3.5 text-gray-400 inline mr-1" />
         {T("Źródło", "Kilde", "Source")}: {article.source || "-"}
