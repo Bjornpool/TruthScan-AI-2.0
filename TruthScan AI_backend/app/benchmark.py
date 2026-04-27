@@ -2,7 +2,7 @@
 Moduł benchmarkowania modeli NLP.
 
 Mierzy czas inferencji, rozkład sentymentów i prawdopodobieństwo fake news
-dla każdego adaptera (roberta, xlm-roberta, norbert) na próbce tekstów
+dla każdego adaptera (roberta, xlm-roberta, norbert, herbert) na próbce tekstów
 z trzech grup językowych (en, pl, no).
 
 Użycie standalone:
@@ -96,7 +96,7 @@ def run_benchmark(
         Lista słowników z wynikami — jeden wpis na kombinację adapter × język.
     """
     if adapter_names is None:
-        adapter_names = ["roberta", "xlm-roberta", "norbert"]
+        adapter_names = ["roberta", "xlm-roberta", "norbert", "herbert"]
     if langs is None:
         langs = ["en", "pl", "no"]
 
@@ -202,7 +202,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="TruthScan NLP benchmark")
     parser.add_argument(
-        "--adapters", default="roberta,xlm-roberta,norbert",
+        "--adapters", default="roberta,xlm-roberta,norbert,herbert",
         help="Przecinkowa lista adapterów (domyślnie: wszystkie)",
     )
     parser.add_argument(

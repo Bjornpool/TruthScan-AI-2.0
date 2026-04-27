@@ -15,7 +15,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Home, LayoutDashboard, Bookmark } from "lucide-react";
+import { Home, LayoutDashboard, Bookmark, FlaskConical } from "lucide-react";
 import LanguageSwitcher from "./LanguageSwitcher";
 import DarkModeToggle from "./DarkModeToggle";
 
@@ -37,9 +37,10 @@ export default function NavBar() {
   }, [language]);
 
   const links = [
-    { href: "/",          labelPl: "Strona główna", labelEn: "Home",      labelNo: "Hjem",     Icon: Home },
-    { href: "/dashboard", labelPl: "Dashboard",     labelEn: "Dashboard", labelNo: "Dashbord", Icon: LayoutDashboard },
-    { href: "/saved",     labelPl: "Zapisane",      labelEn: "Saved",     labelNo: "Lagrede",  Icon: Bookmark },
+    { href: "/",           labelPl: "Strona główna", labelEn: "Home",      labelNo: "Hjem",      Icon: Home },
+    { href: "/dashboard",  labelPl: "Dashboard",     labelEn: "Dashboard", labelNo: "Dashbord",  Icon: LayoutDashboard },
+    { href: "/saved",      labelPl: "Zapisane",      labelEn: "Saved",     labelNo: "Lagrede",   Icon: Bookmark },
+    { href: "/benchmark",  labelPl: "Benchmark",     labelEn: "Benchmark", labelNo: "Benchmark", Icon: FlaskConical },
   ];
 
  return (
