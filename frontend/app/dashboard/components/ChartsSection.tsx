@@ -71,6 +71,12 @@ export default function ChartsSection({
   const chartsSectionRef = useRef<HTMLDivElement | null>(null);
   const hasLoadedRef = useRef(false);
 
+  console.log('[CACHE CHECK]', {
+    cachedCharts: !!cachedCharts,
+    cachedChartsData: cachedCharts ? Object.keys(cachedCharts) : null,
+    hasLoadedRef: hasLoadedRef?.current
+  });
+
   // ── Effective values ────────────────────────────────────────────────────────
   // Live dane z hooka (subskrypcja Zustand) mają priorytet nad starym cache z localStorage.
   // Dzięki temu zmiana artykułów (SSE/prefetch) natychmiast aktualizuje wykresy.
