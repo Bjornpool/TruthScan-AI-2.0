@@ -103,7 +103,7 @@ export async function fetchOneSource(
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 45_000);
+    const timeoutId = setTimeout(() => controller.abort(), 60_000);
     const res = await fetch(
       `${apiBase}/news/${src}?lang=${language}`,
       { signal: controller.signal }
