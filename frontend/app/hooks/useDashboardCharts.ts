@@ -161,8 +161,8 @@ if (barsMap.size === 0) return; // nic w cache — nie nadpisuj pustą tablicą
   return {
     barData,
     emotionData,
-    progressCount,
-    progressPct,
+    progressCount: barData.length,
+    progressPct: Math.round((barData.length / ALL_SOURCES.length) * 100),
     chartsLoading,
     chartsError,
     chartsStarted: chartsStartedRef.current,

@@ -30,10 +30,10 @@ export default function ProgressBar({
       <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
         <span>
           {language === "pl"
-            ? `Postęp ładowania wykresów: ${progressCount} / ${totalSources}`
+            ? `Załadowano źródeł: ${progressCount} / ${totalSources}`
             : language === "no"
-            ? `Lasteframgang for diagrammer: ${progressCount} / ${totalSources}`
-            : `Charts loading progress: ${progressCount} / ${totalSources}`}
+            ? `Lastede kilder: ${progressCount} / ${totalSources}`
+            : `Loaded sources: ${progressCount} / ${totalSources}`}
         </span>
         <span>{progressPct}%</span>
       </div>

@@ -355,6 +355,15 @@ export default function ChartsSection({
                   {aiComment}
                 </div>
               )}
+              {!effectiveChartsLoading && effectiveBarData.length < effectiveTotalSources && (
+                <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
+                  {language === "pl"
+                    ? `Załadowano ${effectiveBarData.length} z ${effectiveTotalSources} źródeł. Niektóre źródła mogą być niedostępne.`
+                    : language === "no"
+                    ? `Lastet ${effectiveBarData.length} av ${effectiveTotalSources} kilder. Noen kilder kan være utilgjengelige.`
+                    : `Loaded ${effectiveBarData.length} of ${effectiveTotalSources} sources. Some sources may be unavailable.`}
+                </p>
+              )}
             </>
           ) : effectiveChartsLoading ? (
             <MiniSpinner
