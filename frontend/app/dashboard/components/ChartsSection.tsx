@@ -139,7 +139,9 @@ export default function ChartsSection({
   // Generuj komentarz AI raz po załadowaniu danych wykresu emocji
   useEffect(() => {
     if (aiEmotionCommentFiredRef.current) return;
-    if (!isClient || effectiveChartsLoading || !effectiveHasEmos || effectiveEmotionData.length === 0) return;
+    if (!isClient || effectiveChartsLoading || !effectiveHasEmos) return;
+    const totalEmotionArticles = effectiveEmotionData.reduce((sum, e) => sum + e.value, 0);
+    if (totalEmotionArticles < 20) return;
 
     aiEmotionCommentFiredRef.current = true;
     setAiEmotionCommentLoading(true);
@@ -163,7 +165,7 @@ export default function ChartsSection({
   // Generuj komentarz AI raz po załadowaniu danych wykresu słupkowego
   useEffect(() => {
     if (aiCommentFiredRef.current) return;
-    if (!isClient || effectiveChartsLoading || !effectiveHasBars || effectiveBarData.length === 0) return;
+    if (!isClient || effectiveChartsLoading || !effectiveHasBars || effectiveBarData.length < 5) return;
 
     aiCommentFiredRef.current = true;
     setAiCommentLoading(true);
@@ -364,6 +366,22 @@ export default function ChartsSection({
                   : "Loading sources chart…"
               }
             />
+          ) : effectiveChartsStarted ? (
+            <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-500 dark:text-gray-400 py-12">
+              <p className="text-sm">
+                {language === "pl"
+                  ? "Brak danych — odśwież stronę"
+                  : language === "no"
+                  ? "Ingen data — oppdater siden"
+                  : "No data — refresh the page"}
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+              >
+                {language === "pl" ? "Odśwież" : language === "no" ? "Oppdater" : "Refresh"}
+              </button>
+            </div>
           ) : null}
         </div>
       </section>
