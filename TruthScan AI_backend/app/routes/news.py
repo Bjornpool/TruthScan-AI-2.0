@@ -43,7 +43,7 @@ def get_news(source: str, lang: str = "pl", model: str = "roberta"):
     if not feed.entries:
         return {"source": source, "articles": []}
 
-    MAX_ARTICLES = 5
+    MAX_ARTICLES = 3
     articles: List[dict] = []
 
     # Przetwarzanie i analiza artykułów
@@ -97,7 +97,7 @@ async def stream_news(source: str, lang: str = "pl", model: str = "roberta"):
             return
 
         entries = feed.entries or []
-        MAX_ARTICLES = 5
+        MAX_ARTICLES = 3
         to_send = entries[:MAX_ARTICLES]
 
         # Metadane dla klienta
