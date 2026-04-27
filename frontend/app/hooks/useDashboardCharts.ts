@@ -125,37 +125,44 @@ if (barsMap.size === 0) return; // nic w cache — nie nadpisuj pustą tablicą
 
     console.log(`[CHARTS] start: ${ALL_SOURCES.length} źródeł, lang=${language}`);
 
-    const cacheState = useNewsCache.getState();
+    const CONCURRENCY = 3;
+    const queue = [...ALL_SOURCES];
 
-    const promises = ALL_SOURCES.map(async (src) => {
-      try {
-        const cached = cacheState.get<Article[]>(newsKey(src));
+    async function fetchWorker() {
+      while (queue.length > 0) {
+        const src = queue.shift();
+        if (!src) return;
 
-        if (cached && cached.length > 0) {
-          console.log(`[CHARTS] [${src}] → CACHE HIT (${cached.length} art)`);
-          // recomputeFromCache działa reaktywnie; nic więcej nie trzeba robić
-        } else {
-          console.log(`[CHARTS] [${src}] → CACHE MISS → HTTP`);
-          const { articles } = await fetchOneSource(src, language);
+        try {
+          const cached = useNewsCache.getState().get<Article[]>(newsKey(src));
 
-          console.log(`[CHARTS] [${src}] HTTP: ${articles.length} art`);
+          if (cached && cached.length > 0) {
+            console.log(`[CHARTS] [${src}] → CACHE HIT (${cached.length} art)`);
+          } else {
+            console.log(`[CHARTS] [${src}] → CACHE MISS → HTTP`);
+            const { articles } = await fetchOneSource(src, language);
 
-          if (articles.length > 0) {
-            // Zapis do cache wyzwala subskrypcję → recomputeFromCache()
-            useNewsCache.getState().set(newsKey(src), articles);
+            console.log(`[CHARTS] [${src}] HTTP: ${articles.length} art`);
+
+            if (articles.length > 0) {
+              // Zapis do cache wyzwala subskrypcję → recomputeFromCache()
+              useNewsCache.getState().set(newsKey(src), articles);
+            }
           }
+        } catch (error) {
+          console.warn(`[CHARTS] [${src}] błąd:`, error);
+        } finally {
+          setProgressCount((c) => c + 1);
         }
-      } catch (error) {
-        console.warn(`[CHARTS] [${src}] błąd:`, error);
-      } finally {
-        setProgressCount((c) => c + 1);
       }
-    });
+    }
 
-    await Promise.allSettled(promises);
+    const workers = Array.from({ length: CONCURRENCY }, () => fetchWorker());
+    await Promise.allSettled(workers);
     setChartsLoading(false);
 
-    console.log("[CHARTS] gotowe. barsMap rozmiar po HTTP:", barData.length);
+    console.log("[CHARTS] gotowe. barData końcowy:", barData.map(b => b.label));
+    console.log("[CHARTS] barData.length po zakończeniu:", barData.length);
   }, [language, barData.length]);
 
   return {
