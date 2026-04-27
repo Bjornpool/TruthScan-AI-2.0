@@ -159,6 +159,9 @@ if (barsMap.size === 0) return; // nic w cache — nie nadpisuj pustą tablicą
 
     const workers = Array.from({ length: CONCURRENCY }, () => fetchWorker());
     await Promise.allSettled(workers);
+
+    // Wymuś przeliczenie po zakończeniu — CACHE HIT nie wyzwala subskrypcji Zustand
+    recomputeFromCache();
     setChartsLoading(false);
 
     console.log("[CHARTS] gotowe. barData końcowy:", barData.map(b => b.label));

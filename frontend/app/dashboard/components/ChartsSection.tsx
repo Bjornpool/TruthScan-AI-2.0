@@ -16,6 +16,7 @@ import EmotionalPieChart from "../../../components/EmotionalPieChart";
 import FakeNewsBarChart from "../../../components/FakeNewsBarChart";
 import ProgressBar from "../../../components/ProgressBar";
 import { useDashboardCharts } from "../../hooks/useDashboardCharts";
+import { useNewsCache } from "../../stores/newsCache";
 import locales from "../../../lib/locales";
 import MiniSpinner from "./MiniSpinner";
 import ArticlesModal from "./ArticlesModal";
@@ -94,11 +95,10 @@ export default function ChartsSection({
 
   useEffect(() => {
     setIsClient(true);
-
-    import("../../../app/stores/newsCache").then(({ useNewsCache }) => {
-      const cache = useNewsCache.getState();
-      setCachedCharts(cache.get<ChartsCache>(CHARTS_CACHE_KEY));
-    });
+    // Synchroniczny odczyt — brak dynamic import eliminuje race condition
+    // z hasLoadedRef, który blokował użycie cache na kolejnych wejściach
+    const cached = useNewsCache.getState().get<ChartsCache>(CHARTS_CACHE_KEY);
+    setCachedCharts(cached);
   }, []);
 
   useEffect(() => {
@@ -189,20 +189,17 @@ export default function ChartsSection({
 
     if (!barData?.length && !emotionData?.length) return;
 
-    import("../../../app/stores/newsCache").then(({ useNewsCache }) => {
-      const cache = useNewsCache.getState();
+    const cache = useNewsCache.getState();
+    const currentCache = cache.get<ChartsCache>(CHARTS_CACHE_KEY);
+    const areDataEqual =
+      JSON.stringify(currentCache?.barData) === JSON.stringify(barData) &&
+      JSON.stringify(currentCache?.emotionData) === JSON.stringify(emotionData);
 
-      const currentCache = cache.get<ChartsCache>(CHARTS_CACHE_KEY);
-      const areDataEqual =
-        JSON.stringify(currentCache?.barData) === JSON.stringify(barData) &&
-        JSON.stringify(currentCache?.emotionData) === JSON.stringify(emotionData);
+    if (areDataEqual) return;
 
-      if (areDataEqual) return;
-
-      const payload: ChartsCache = { barData, emotionData, totalSources };
-      cache.set(CHARTS_CACHE_KEY, payload);
-      setCachedCharts(payload);
-    });
+    const payload: ChartsCache = { barData, emotionData, totalSources };
+    cache.set(CHARTS_CACHE_KEY, payload);
+    setCachedCharts(payload);
   }, [
     isClient,
     chartsStarted,
