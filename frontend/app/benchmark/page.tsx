@@ -354,7 +354,12 @@ export default function BenchmarkPage() {
                   {t.tableDesc} —{" "}
                   {["roberta", "xlm-roberta", "herbert", "norbert"].map((m, i, arr) => (
                     <span key={m}>
-                      <a href="/dashboard#modele" className="text-blue-500 hover:underline">{m}</a>
+                      <button
+                        onClick={() => setActiveModel(m)}
+                        className="text-blue-500 hover:underline cursor-pointer"
+                      >
+                        {m}
+                      </button>
                       {i < arr.length - 1 ? ", " : ""}
                     </span>
                   ))}
