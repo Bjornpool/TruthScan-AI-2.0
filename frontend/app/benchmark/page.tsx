@@ -167,6 +167,8 @@ export default function BenchmarkPage() {
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState<string | null>(null);
   const [activeModel, setActiveModel] = useState<string | null>(null);
+  const [aiComment, setAiComment]     = useState<string | null>(null);
+  const [aiLoading, setAiLoading]     = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem("lang");
@@ -184,6 +186,7 @@ export default function BenchmarkPage() {
   const runBenchmark = async () => {
     setLoading(true);
     setError(null);
+    setAiComment(null);
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
       const controller = new AbortController();
@@ -192,7 +195,23 @@ export default function BenchmarkPage() {
       clearTimeout(tid);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setResults(data.results ?? data);
+      const fetchedResults: BenchmarkResult[] = data.results ?? data;
+      setResults(fetchedResults);
+
+      // Wywołaj Analizę AI po załadowaniu wyników
+      const validForAI = fetchedResults.filter((r) => !r.error && r.language);
+      if (validForAI.length > 0) {
+        setAiLoading(true);
+        fetch(`${apiBase}/ai-benchmark-comment`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ results: validForAI, lang: language }),
+        })
+          .then((r) => r.json())
+          .then((d) => setAiComment(d.comment ?? null))
+          .catch(() => setAiComment(null))
+          .finally(() => setAiLoading(false));
+      }
     } catch (err: any) {
       setError(err?.message ?? "Unknown error");
     } finally {
@@ -345,6 +364,32 @@ export default function BenchmarkPage() {
               </ResponsiveContainer>
               <p className="mt-3 text-sm text-gray-400 dark:text-gray-500 italic">{t.chart3Desc}</p>
             </section>
+
+            {/* AI Analysis */}
+            {(aiLoading || aiComment) && (
+              <section className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+                <h2 className="text-lg font-semibold mb-3">
+                  {language === "pl" ? "Analiza AI" : language === "no" ? "AI-analyse" : "AI Analysis"}
+                </h2>
+                {aiLoading && (
+                  <p className="text-sm italic text-gray-400 dark:text-gray-500 animate-pulse">
+                    {language === "pl"
+                      ? "Generowanie analizy AI…"
+                      : language === "no"
+                      ? "Genererer AI-analyse…"
+                      : "Generating AI analysis…"}
+                  </p>
+                )}
+                {aiComment && (
+                  <div className="rounded-lg bg-gray-200/70 dark:bg-gray-700/60 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">
+                      ✨ {language === "pl" ? "Analiza AI:" : language === "no" ? "AI-analyse:" : "AI Analysis:"}
+                    </span>{" "}
+                    {aiComment}
+                  </div>
+                )}
+              </section>
+            )}
 
             {/* Table */}
             <section className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
