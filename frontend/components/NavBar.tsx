@@ -18,6 +18,7 @@ import { motion } from "framer-motion";
 import { Home, LayoutDashboard, Bookmark, FlaskConical } from "lucide-react";
 import LanguageSwitcher from "./LanguageSwitcher";
 import DarkModeToggle from "./DarkModeToggle";
+import Logo from "./Logo";
 
 type Lang = "pl" | "en" | "no";
 
@@ -48,13 +49,7 @@ export default function NavBar() {
       <div className="w-full flex justify-between items-center px-4 md:px-6 h-14">
 
         <div className="flex items-center gap-6">
-          <div
-            className="hidden sm:block text-base font-semibold text-blue-600 dark:text-blue-400 select-none cursor-default"
-            aria-label="TruthScan AI"
-            role="img"
-          >
-            TruthScan AI
-          </div>
+          <Logo />
 
           <div className="flex items-center gap-6 relative">
             {links.map(({ href, labelPl, labelEn, labelNo, Icon }) => {
