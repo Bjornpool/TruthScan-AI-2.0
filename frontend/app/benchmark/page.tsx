@@ -59,7 +59,7 @@ function normalizeSentKey(k: string): "positive" | "neutral" | "negative" {
 
 const i18n = {
   pl: {
-    title:       "Benchmark modeli NLP",
+    title:       "Analiza i porównanie modeli NLP",
     subtitle:    "Porównanie czasu inferencji, rozkładu sentymentów i prawdopodobieństwa fake newsów",
     intro:       "Benchmark porównuje cztery modele NLP (RoBERTa, XLM-RoBERTa, NorBERT 3, HerBERT) na artykułach w trzech językach: polskim, norweskim i angielskim. Każdy model analizuje 8 artykułów per język — łącznie 96 analiz NLP. Wyniki pokazują czas inferencji, rozkład sentymentu oraz prawdopodobieństwo dezinformacji.",
     runBtn:      "Uruchom benchmark",
@@ -92,7 +92,7 @@ const i18n = {
     },
   },
   en: {
-    title:       "NLP Model Benchmark",
+    title:       "NLP Model Analysis and Comparison",
     subtitle:    "Comparison of inference time, sentiment distribution and fake news probability",
     intro:       "The benchmark compares four NLP models (RoBERTa, XLM-RoBERTa, NorBERT 3, HerBERT) on articles in three languages: Polish, Norwegian and English. Each model analyses 8 articles per language — 96 NLP inferences in total. Results show inference time, sentiment distribution and misinformation probability.",
     runBtn:      "Run benchmark",
@@ -125,7 +125,7 @@ const i18n = {
     },
   },
   no: {
-    title:       "NLP-modell benchmark",
+    title:       "Analyse og sammenligning av NLP-modeller",
     subtitle:    "Sammenligning av inferenstid, sentimentfordeling og sannsynlighet for falske nyheter",
     intro:       "Benchmarken sammenligner fire NLP-modeller (RoBERTa, XLM-RoBERTa, NorBERT 3, HerBERT) på artikler på tre språk: polsk, norsk og engelsk. Hver modell analyserer 8 artikler per språk — totalt 96 NLP-analyser. Resultatene viser inferenstid, sentimentfordeling og sannsynlighet for desinformasjon.",
     runBtn:      "Kjør benchmark",

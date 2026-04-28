@@ -40,7 +40,7 @@ export default function NavBar() {
     { href: "/",           labelPl: "Strona główna", labelEn: "Home",      labelNo: "Hjem",      Icon: Home },
     { href: "/dashboard",  labelPl: "Dashboard",     labelEn: "Dashboard", labelNo: "Dashbord",  Icon: LayoutDashboard },
     { href: "/saved",      labelPl: "Zapisane",      labelEn: "Saved",     labelNo: "Lagrede",   Icon: Bookmark },
-    { href: "/benchmark",  labelPl: "Benchmark",     labelEn: "Benchmark", labelNo: "Benchmark", Icon: FlaskConical },
+    { href: "/benchmark",  labelPl: "Analiza modeli", labelEn: "Model Analysis", labelNo: "Modellanalyse", Icon: FlaskConical },
   ];
 
  return (
