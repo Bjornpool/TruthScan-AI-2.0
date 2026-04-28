@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FlaskConical } from "lucide-react";
+import { FlaskConical, X } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer,
@@ -84,6 +84,12 @@ const i18n = {
     errPrefix:   "Błąd:",
     langs:       { en: "Angielski", pl: "Polski", no: "Norweski" },
     sentLabels:  { positive: "Pozytywny", neutral: "Neutralny", negative: "Negatywny" },
+    models: {
+      "roberta":     "RoBERTa (Robustly Optimized BERT Pretraining Approach) — jednojęzyczny model transformers od CardiffNLP, wytrenowany na tekstach anglojęzycznych z Twittera. Specjalizuje się w analizie sentymentu dla języka angielskiego.",
+      "xlm-roberta": "XLM-RoBERTa — wielojęzyczny model transformers od Meta AI, wytrenowany na 100 językach. Umożliwia analizę sentymentu dla języka polskiego, norweskiego i angielskiego w ramach jednego modelu.",
+      "norbert":     "NorBERT 3 — dedykowany model dla języka norweskiego, opracowany przez Uniwersytet w Oslo. Wytrenowany na Norwegian Colossal Corpus (60 miliardów tokenów). Najdokładniejszy model dla języka norweskiego.",
+      "herbert":     "HerBERT — dedykowany model dla języka polskiego, opracowany przez Allegro Research. Wytrenowany na polskich tekstach z uwzględnieniem morfologii języka polskiego (whole word masking).",
+    },
   },
   en: {
     title:       "NLP Model Benchmark",
@@ -111,6 +117,12 @@ const i18n = {
     errPrefix:   "Error:",
     langs:       { en: "English", pl: "Polish", no: "Norwegian" },
     sentLabels:  { positive: "Positive", neutral: "Neutral", negative: "Negative" },
+    models: {
+      "roberta":     "RoBERTa (Robustly Optimized BERT Pretraining Approach) — a monolingual transformers model by CardiffNLP, trained on English-language Twitter data. Specialises in sentiment analysis for English.",
+      "xlm-roberta": "XLM-RoBERTa — a multilingual transformers model by Meta AI, trained on 100 languages. Enables sentiment analysis for Polish, Norwegian and English within a single model.",
+      "norbert":     "NorBERT 3 — a dedicated model for the Norwegian language, developed by the University of Oslo. Trained on the Norwegian Colossal Corpus (60 billion tokens). Most accurate model for Norwegian.",
+      "herbert":     "HerBERT — a dedicated model for the Polish language, developed by Allegro Research. Trained on Polish texts with support for Polish morphology (whole word masking).",
+    },
   },
   no: {
     title:       "NLP-modell benchmark",
@@ -138,16 +150,23 @@ const i18n = {
     errPrefix:   "Feil:",
     langs:       { en: "Engelsk", pl: "Polsk", no: "Norsk" },
     sentLabels:  { positive: "Positivt", neutral: "Nøytralt", negative: "Negativt" },
+    models: {
+      "roberta":     "RoBERTa (Robustly Optimized BERT Pretraining Approach) — en enspråklig transformers-modell fra CardiffNLP, trent på engelskspråklige Twitter-tekster. Spesialiserer seg på sentimentanalyse for engelsk.",
+      "xlm-roberta": "XLM-RoBERTa — en flerspråklig transformers-modell fra Meta AI, trent på 100 språk. Muliggjør sentimentanalyse for polsk, norsk og engelsk innenfor én og samme modell.",
+      "norbert":     "NorBERT 3 — en dedikert modell for norsk, utviklet av Universitetet i Oslo. Trent på Norwegian Colossal Corpus (60 milliarder tokens). Den mest nøyaktige modellen for norsk.",
+      "herbert":     "HerBERT — en dedikert modell for polsk, utviklet av Allegro Research. Trent på polske tekster med støtte for polsk morfologi (whole word masking).",
+    },
   },
 } as const;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function BenchmarkPage() {
-  const [language, setLanguage] = useState<Lang>("pl");
-  const [results, setResults]   = useState<BenchmarkResult[]>([]);
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState<string | null>(null);
+  const [language, setLanguage]       = useState<Lang>("pl");
+  const [results, setResults]         = useState<BenchmarkResult[]>([]);
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState<string | null>(null);
+  const [activeModel, setActiveModel] = useState<string | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("lang");
@@ -357,7 +376,14 @@ export default function BenchmarkPage() {
                         .join(", ");
                       return (
                         <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                          <td className="px-4 py-3 font-medium text-blue-600 dark:text-blue-400">{r.adapter_name}</td>
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => setActiveModel(r.adapter_name)}
+                              className="font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                            >
+                              {r.adapter_name}
+                            </button>
+                          </td>
                           <td className="px-4 py-3">
                             <span className="px-2 py-0.5 rounded text-xs font-semibold"
                               style={{ background: LANG_COLORS[r.language!] + "33", color: LANG_COLORS[r.language!] }}>
@@ -393,6 +419,36 @@ export default function BenchmarkPage() {
         )}
 
       </div>
+
+      {/* Model info modal */}
+      {activeModel && (
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[100] flex items-center justify-center">
+          <button aria-label="Close" onClick={() => setActiveModel(null)} className="absolute inset-0 bg-black/60" />
+          <div className="relative z-[101] w-[92vw] max-w-xl rounded-lg bg-white dark:bg-slate-900 shadow-lg border border-slate-200/60 dark:border-slate-700/60">
+            <div className="flex items-start justify-between p-4 border-b border-slate-200/60 dark:border-slate-700/60">
+              <h3 className="text-base font-semibold">{activeModel}</h3>
+              <button
+                onClick={() => setActiveModel(null)}
+                className="rounded p-1 text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
+              {(t.models as Record<string, string>)[activeModel] ?? activeModel}
+            </div>
+            <div className="p-3 flex justify-end">
+              <button
+                onClick={() => setActiveModel(null)}
+                className="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
