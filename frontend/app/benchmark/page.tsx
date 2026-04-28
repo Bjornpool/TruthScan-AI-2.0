@@ -55,6 +55,17 @@ function normalizeSentKey(k: string): "positive" | "neutral" | "negative" {
   return "neutral";
 }
 
+// Translate any sentiment label variant to the current UI language
+function normalizeSentimentLabel(label: string, lang: string): string {
+  const canonical = normalizeSentKey(label);
+  const labels: Record<string, Record<"positive" | "neutral" | "negative", string>> = {
+    pl: { positive: "Pozytywny", neutral: "Neutralny", negative: "Negatywny" },
+    en: { positive: "Positive",  neutral: "Neutral",   negative: "Negative"  },
+    no: { positive: "Positiv",   neutral: "Nøytral",   negative: "Negativ"   },
+  };
+  return labels[lang]?.[canonical] ?? label;
+}
+
 // ── i18n ─────────────────────────────────────────────────────────────────────
 
 const i18n = {
@@ -422,7 +433,7 @@ export default function BenchmarkPage() {
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                     {validResults.map((r, i) => {
                       const sentStr = Object.entries(r.sentiments_distribution ?? {})
-                        .map(([k, v]) => `${k}: ${v}`)
+                        .map(([k, v]) => `${normalizeSentimentLabel(k, language)}: ${v}`)
                         .join(", ");
                       return (
                         <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
