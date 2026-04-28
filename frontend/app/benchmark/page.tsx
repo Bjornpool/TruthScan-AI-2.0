@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FlaskConical, X } from "lucide-react";
+import { FlaskConical, X, Download } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer,
@@ -74,6 +74,7 @@ const i18n = {
     subtitle:    "Porównanie czasu inferencji, rozkładu sentymentów i prawdopodobieństwa fake newsów",
     intro:       "System przeprowadza analizę porównawczą czterech modeli NLP (RoBERTa, XLM-RoBERTa, NorBERT 3, HerBERT) na rzeczywistych artykułach prasowych w trzech językach: polskim, norweskim i angielskim. Każdy model analizuje 8 artykułów per język — łącznie 96 analiz. Wyniki pokazują czas odpowiedzi modelu, rozkład sentymentu oraz prawdopodobieństwo dezinformacji według modelu BART.",
     runBtn:      "Uruchom analizę porównawczą",
+    csvBtn:      "Pobierz CSV",
     running:     "Trwa analiza porównawcza... (może potrwać 2–3 minuty)",
     chart1:      "Czasy inferencji (ms)",
     chart1Desc:  "Niższy wynik oznacza szybszy model. Pierwsze uruchomienie modelu może być wolniejsze ze względu na ładowanie do pamięci.",
@@ -107,6 +108,7 @@ const i18n = {
     subtitle:    "Comparison of inference time, sentiment distribution and fake news probability",
     intro:       "The system performs a comparative analysis of four NLP models (RoBERTa, XLM-RoBERTa, NorBERT 3, HerBERT) on real news articles in three languages: Polish, Norwegian and English. Each model analyses 8 articles per language — 96 analyses in total. Results show model response time, sentiment distribution and fake news probability according to the BART model.",
     runBtn:      "Run comparative analysis",
+    csvBtn:      "Download CSV",
     running:     "Running comparative analysis... (may take 2–3 minutes)",
     chart1:      "Inference time (ms)",
     chart1Desc:  "Lower score means a faster model. The first model run may be slower due to loading into memory.",
@@ -140,6 +142,7 @@ const i18n = {
     subtitle:    "Sammenligning av inferenstid, sentimentfordeling og sannsynlighet for falske nyheter",
     intro:       "Systemet utfører en komparativ analyse av fire NLP-modeller (RoBERTa, XLM-RoBERTa, NorBERT 3, HerBERT) på ekte nyhetsartikler på tre språk: polsk, norsk og engelsk. Hver modell analyserer 8 artikler per språk — totalt 96 analyser. Resultatene viser modellens svartid, sentimentfordeling og sannsynlighet for feilinformasjon ifølge BART-modellen.",
     runBtn:      "Kjør komparativ analyse",
+    csvBtn:      "Last ned CSV",
     running:     "Kjører komparativ analyse... (kan ta 2–3 minutter)",
     chart1:      "Inferenstid (ms)",
     chart1Desc:  "Lavere score betyr en raskere modell. Første kjøring av modellen kan være tregere på grunn av innlasting i minnet.",
@@ -193,6 +196,39 @@ export default function BenchmarkPage() {
   }, []);
 
   const t = i18n[language];
+
+  const exportCSV = () => {
+    const formatNum = (n: number | null | undefined) =>
+      n != null ? n.toString().replace(".", ",") : "";
+
+    const header = "Model;Język;Próbki;Śr. czas (ms);Min (ms);Max (ms);Fake Prob%;Pozytywny;Neutralny;Negatywny";
+    const rows = validResults.map((r) => {
+      const sd = r.sentiments_distribution ?? {};
+      const pos = Object.entries(sd).reduce((acc, [k, v]) => normalizeSentKey(k) === "positive" ? acc + v : acc, 0);
+      const neu = Object.entries(sd).reduce((acc, [k, v]) => normalizeSentKey(k) === "neutral"  ? acc + v : acc, 0);
+      const neg = Object.entries(sd).reduce((acc, [k, v]) => normalizeSentKey(k) === "negative" ? acc + v : acc, 0);
+      return [
+        r.adapter_name,
+        r.language ?? "",
+        r.sample_size ?? "",
+        formatNum(r.avg_inference_time_ms),
+        formatNum(r.min_inference_time_ms),
+        formatNum(r.max_inference_time_ms),
+        formatNum(r.avg_fake_probability),
+        pos,
+        neu,
+        neg,
+      ].join(";");
+    });
+    const csv = [header, ...rows].join("\n");
+    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `truthscan-benchmark-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const runBenchmark = async () => {
     setLoading(true);
@@ -291,8 +327,8 @@ export default function BenchmarkPage() {
           {t.intro}
         </div>
 
-        {/* Run button */}
-        <div className="flex justify-center">
+        {/* Run button + CSV download */}
+        <div className="flex justify-center items-center gap-3 flex-wrap">
           <button
             onClick={runBenchmark}
             disabled={loading}
@@ -301,6 +337,16 @@ export default function BenchmarkPage() {
             <FlaskConical className="w-5 h-5" />
             {loading ? t.running : t.runBtn}
           </button>
+
+          {validResults.length > 0 && (
+            <button
+              onClick={exportCSV}
+              className="inline-flex items-center gap-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-semibold px-5 py-3 rounded-lg shadow-sm transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              {(t as any).csvBtn}
+            </button>
+          )}
         </div>
 
         {/* Spinner */}
