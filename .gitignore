@@ -7,3 +7,4 @@ benchmark_results/
 debug_adapters.py
 truthscan_report.*
 setup_test_env.bat
+.claude/
