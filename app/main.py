@@ -50,6 +50,11 @@ async def root():
     return {"message": "TruthScan API", "status": "running", "cached": True}
 
 
+@app.head("/")
+async def head_root():
+    return Response()
+
+
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
