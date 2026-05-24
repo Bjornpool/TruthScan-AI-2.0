@@ -207,6 +207,82 @@ def ai_emotion_comment(request: EmotionCommentRequest):
     return EmotionCommentResponse(comment=comment)
 
 
+BENCHMARK_COMMENT_PROMPT = {
+    "pl": (
+        "Przeanalizuj wyniki analizy porównawczej modeli NLP:\n\n{summary}\n\n"
+        "Napisz 4–5 zdań analizy po polsku: który model jest najszybszy i o ile, "
+        "które modele wykazują anomalie w klasyfikacji sentymentu, jak zachowują się modele "
+        "w różnych językach, i jakie wnioski praktyczne można wyciągnąć dla użytkownika systemu. "
+        "Bądź konkretny i podawaj liczby. "
+        "Pisz czystym tekstem — bez markdown, bez gwiazdek, bez list."
+    ),
+    "en": (
+        "Analyse the results of the NLP model comparative analysis:\n\n{summary}\n\n"
+        "Write 4–5 sentences in English: which model is the fastest and by how much, "
+        "which models show anomalies in sentiment classification, how models perform across "
+        "different languages, and what practical conclusions can be drawn for system users. "
+        "Be specific and include numbers. "
+        "Write in plain text — no markdown, no asterisks, no lists."
+    ),
+    "no": (
+        "Analyser resultatene av den komparative analysen av NLP-modeller:\n\n{summary}\n\n"
+        "Skriv 4–5 setninger på norsk: hvilken modell er raskest og med hvor mye, "
+        "hvilke modeller viser avvik i sentimentklassifisering, hvordan modellene presterer "
+        "på tvers av ulike språk, og hvilke praktiske konklusjoner som kan trekkes for systembrukere. "
+        "Vær konkret og oppgi tall. "
+        "Skriv i ren tekst — ingen markdown, ingen stjerner, ingen lister."
+    ),
+}
+
+
+class BenchmarkCommentRequest(BaseModel):
+    results: list
+    lang: str = "pl"
+
+
+class BenchmarkCommentResponse(BaseModel):
+    comment: str
+
+
+@router.post("/ai-benchmark-comment", response_model=BenchmarkCommentResponse)
+def ai_benchmark_comment(request: BenchmarkCommentRequest):
+    """Generuje analizę Claude na podstawie wyników benchmarku modeli NLP."""
+    valid = [r for r in request.results if not r.get("error") and r.get("language")]
+    if not valid:
+        raise HTTPException(status_code=422, detail="Brak poprawnych wyników benchmarku.")
+
+    lang = request.lang if request.lang in BENCHMARK_COMMENT_PROMPT else "pl"
+
+    # Buduj czytelne podsumowanie wyników
+    lines = []
+    for r in valid:
+        sent = ", ".join(f"{k}:{v}" for k, v in (r.get("sentiments_distribution") or {}).items())
+        lines.append(
+            f"  {r['adapter_name']} / {r['language']}: "
+            f"śr. czas={r.get('avg_inference_time_ms', '?')} ms, "
+            f"fake={r.get('avg_fake_probability', '?')}%, "
+            f"sentyment=[{sent}]"
+        )
+    summary = "\n".join(lines)
+    prompt = BENCHMARK_COMMENT_PROMPT[lang].format(summary=summary)
+
+    if not ANTHROPIC_API_KEY:
+        return BenchmarkCommentResponse(comment="[Brak klucza ANTHROPIC_API_KEY]")
+
+    try:
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=400,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        comment = message.content[0].text.strip() if message.content else ""
+    except Exception as e:
+        comment = f"[Błąd Claude API: {e}]"
+
+    return BenchmarkCommentResponse(comment=comment)
+
+
 class CompareRequest(BaseModel):
     text: str
     title: str = ""

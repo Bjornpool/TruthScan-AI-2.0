@@ -6,5 +6,4 @@ saved_articles.json
 benchmark_results/
 debug_adapters.py
 truthscan_report.*
-truthscan_test.py
 setup_test_env.bat
