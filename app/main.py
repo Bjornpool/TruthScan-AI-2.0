@@ -59,8 +59,14 @@ async def root():
     return {"message": "TruthScan API", "status": "running", "cached": True}
 
 
-@app.head("/")
+@app.api_route("/", methods=["HEAD"])
 async def head_root():
+    from fastapi import Response
+    return Response()
+
+@app.api_route("/sources", methods=["HEAD"])
+async def head_sources():
+    from fastapi import Response
     return Response()
 
 
