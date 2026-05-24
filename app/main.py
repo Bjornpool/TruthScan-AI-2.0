@@ -6,7 +6,6 @@ from fastapi import FastAPI, Request
 from fastapi.responses import Response
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.inmemory import InMemoryBackend
-from starlette.middleware.base import BaseHTTPMiddleware
 
 from .routes import misc, news, saved, compare
 
@@ -39,14 +38,6 @@ async def startup():
     FastAPICache.init(InMemoryBackend(), prefix="news-cache")
     print("✓ Cache initialized (5 minut TTL)")
 
-
-class HeadToGetMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        if request.method == "HEAD":
-            request.scope["method"] = "GET"
-        return await call_next(request)
-
-app.add_middleware(HeadToGetMiddleware)
 
 app.include_router(misc.router)
 app.include_router(news.router)
