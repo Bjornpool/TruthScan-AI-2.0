@@ -371,22 +371,26 @@ def analyze_news(
 
     try:
         sentiment_result = _adapter.analyze_sentiment(text)
-        fake_result = _adapter.analyze_fake_news(text)
     except Exception:
-        return {"sentiment": _neutral, "fake_probability": 0.0, "sentiment_score": 0.0}
+        sentiment_result = {"label": "neutral", "score": 0.0}
 
     label = sentiment_result.get("label", "neutral")
     sentiment_translated = SENTIMENT_MAP.get(label, {}).get(lang, _neutral)
 
-    fake_score = 0.0
-    for lbl, score in zip(fake_result["labels"], fake_result["scores"]):
-        if lbl == "fake":
-            fake_score = score
-            break
+    try:
+        fake_result = _adapter.analyze_fake_news(text)
+        fake_score = 0.0
+        for lbl, score in zip(fake_result["labels"], fake_result["scores"]):
+            if lbl == "fake":
+                fake_score = score
+                break
+        fake_probability: Optional[float] = round(fake_score * 100, 2)
+    except Exception:
+        fake_probability = None
 
     return {
         "sentiment": sentiment_translated,
-        "fake_probability": round(fake_score * 100, 2),
+        "fake_probability": fake_probability,
         "sentiment_score": round(float(sentiment_result.get("score", 0.0)), 2),
     }
 
