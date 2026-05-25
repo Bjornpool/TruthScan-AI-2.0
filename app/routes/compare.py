@@ -12,7 +12,7 @@ Zwraca:
 """
 
 import time
-from typing import List
+from typing import Any, Dict, List
 
 import anthropic
 from fastapi import APIRouter, HTTPException
@@ -236,7 +236,7 @@ BENCHMARK_COMMENT_PROMPT = {
 
 
 class BenchmarkCommentRequest(BaseModel):
-    results: list
+    results: List[Dict[str, Any]]
     lang: str = "pl"
 
 
