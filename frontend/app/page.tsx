@@ -131,15 +131,16 @@ export default function HomePage() {
     }
   ];
 
-   const sources = [
-    { href: "https://demagog.org.pl", label: "Demagog", tag: "PL",},
-    { href: "https://konkret24.tvn24.pl", label: "Konkret24", tag: "PL",},
-    { href: "https://fakehunter.pap.pl", label: "FakeHunter", tag: "PL",},
-    { href: "https://euvsdisinfo.eu", label: "EU vs Disinfo", tag: "EU",},
-    { href: "https://www.snopes.com/", label: "Snopes", tag: "EN",},
-    { href: "https://www.politifact.com/", label: "PolitiFact", tag: "EN",},
-    { href: "https://factcheck.afp.com/", label: "AFP Fact Check", tag: "EN",},
-    { href: "https://www.factcheck.org/", label: "FactCheck.org", tag: "EN",  },
+  const sources = [
+    { href: "https://demagog.org.pl",                label: "Demagog",          tag: "PL" },
+    { href: "https://konkret24.tvn24.pl",            label: "Konkret24",        tag: "PL" },
+    { href: "https://fakehunter.pap.pl",             label: "FakeHunter",       tag: "PL" },
+    { href: "https://www.faktisk.no",                label: "Faktisk.no",       tag: "NO" },
+    { href: "https://www.nrk.no/faktasjekk",         label: "Faktasjekk NRK",  tag: "NO" },
+    { href: "https://www.vg.no/nyheter/faktasjekk",  label: "VG Fakta",         tag: "NO" },
+    { href: "https://www.snopes.com",                label: "Snopes",           tag: "EN" },
+    { href: "https://www.politifact.com",            label: "PolitiFact",       tag: "EN" },
+    { href: "https://factcheck.afp.com",             label: "AFP Fact Check",   tag: "EN" },
   ];
 
   type Feature = {
