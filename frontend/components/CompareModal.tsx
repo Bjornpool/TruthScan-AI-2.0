@@ -12,7 +12,7 @@ import type { Lang } from "../lib/types";
 interface AdapterResult {
   adapter: string;
   sentiment: string;
-  sentiment_score: number;
+  sentiment_score: number | null;
   inference_time_ms: number;
 }
 
@@ -268,7 +268,9 @@ export default function CompareModal({ article, language, onClose }: CompareModa
                             </span>
                           </td>
                           <td className="px-4 py-3 text-right tabular-nums text-gray-700 dark:text-gray-300">
-                            {(r.sentiment_score * 100).toFixed(0)}%
+                            {r.sentiment_score !== null
+                              ? `${(r.sentiment_score * 100).toFixed(0)}%`
+                              : "—"}
                           </td>
                           <td className="px-4 py-3 text-right tabular-nums text-gray-500 dark:text-gray-400">
                             {r.inference_time_ms.toFixed(0)}
