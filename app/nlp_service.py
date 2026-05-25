@@ -106,23 +106,44 @@ def _extract_pipeline_result(adapter_name: str, raw: Any) -> Dict[str, Any]:
     Bezpiecznie wyciąga słownik {label, score} z surowego outputu pipeline.
 
     Pipeline text-classification może zwrócić:
-      - [{"label": ..., "score": ...}]            (return_all_scores=False)
-      - [[{"label": ..., "score": ...}, ...]]      (return_all_scores=True / top_k=None)
+      - [{"label": ..., "score": ...}]              (return_all_scores=False / top_k=1 stary format)
+      - [[{"label": ..., "score": ...}, ...]]        (return_all_scores=True / top_k=None)
+      - [{"label": ..., "score": ...}, ...]          (płaski flat list wszystkich labeli)
     """
     try:
         item = raw[0]
-    except (IndexError, TypeError):
+    except (IndexError, TypeError, KeyError):
+        # KeyError: raw jest dictem i raw[0] podnosi KeyError
+        print(f"[NLP] {adapter_name}: nieoczekiwany typ raw={type(raw).__name__!r}, raw={raw!r}")
         return {"label": "", "score": 0.0}
 
     if isinstance(item, dict):
-        result = item
+        # Płaski flat list [dict, dict, ...] — może zawierać wiele labeli.
+        # Bierzemy ten z najwyższym score, a nie tylko raw[0].
+        try:
+            candidates = [x for x in raw if isinstance(x, dict)]
+            result = max(candidates, key=lambda x: x.get("score") or 0.0) if candidates else item
+        except (ValueError, AttributeError):
+            result = item
     elif isinstance(item, list):
-        # return_all_scores=True zwraca listę list — bierzemy element o najwyższym score
+        # Zagnieżdżony format [[dict, dict, ...]] — top_k=None lub return_all_scores=True
         if not item:
             return {"label": "", "score": 0.0}
-        result = max(item, key=lambda x: x.get("score", 0.0))
+        try:
+            result = max(item, key=lambda x: x.get("score") or 0.0)
+        except AttributeError:
+            # Elementy nie są dictami (np. surowe tensory / floaty)
+            print(f"[NLP] {adapter_name}: elementy listy nie są dictami: {type(item[0]).__name__!r}")
+            return {"label": "", "score": 0.0}
     else:
+        print(f"[NLP] {adapter_name}: nieobsługiwany format item={type(item).__name__!r}")
         return {"label": "", "score": 0.0}
+
+    # Normalizuj score: None lub brak klucza → 0.0
+    raw_score = result.get("score")
+    if raw_score is None or not isinstance(raw_score, (int, float)):
+        print(f"[NLP] {adapter_name}: score={raw_score!r} — zastępuję 0.0")
+        result = {**result, "score": 0.0}
 
     return result
 
@@ -163,7 +184,7 @@ class RoBERTaAdapter(ModelAdapter):
             self._sentiment_pipe = pipeline(
                 "text-classification",
                 model="cardiffnlp/twitter-roberta-base-sentiment-latest",
-                return_all_scores=False,
+                top_k=1,
             )
 
     @property
@@ -199,7 +220,7 @@ class XLMRoBERTaAdapter(ModelAdapter):
             self._sentiment_pipe = pipeline(
                 "text-classification",
                 model="cardiffnlp/twitter-xlm-roberta-base-sentiment",
-                return_all_scores=False,
+                top_k=1,
             )
 
     @property
@@ -223,11 +244,11 @@ class XLMRoBERTaAdapter(ModelAdapter):
 class HerBERTAdapter(ModelAdapter):
     """
     Adapter dla języka polskiego (HerBERT).
-      sentyment: allegro/herbert-base-cased (model bazowy — wymaga fine-tuningu)
+      sentyment: Voicelab/herbert-large-cased-sentiment (fine-tuned na polskim sentymencie)
       fake news: współdzielony BART
     """
 
-    SENTIMENT_MODEL: str = "allegro/herbert-base-cased"
+    SENTIMENT_MODEL: str = "Voicelab/herbert-large-cased-sentiment"
 
     def __init__(self, sentiment_model: Optional[str] = None) -> None:
         self._sentiment_model_id = sentiment_model or self.SENTIMENT_MODEL
@@ -238,7 +259,7 @@ class HerBERTAdapter(ModelAdapter):
             self._sentiment_pipe = pipeline(
                 "text-classification",
                 model=self._sentiment_model_id,
-                return_all_scores=False,
+                top_k=1,
             )
 
     @property
@@ -281,7 +302,7 @@ class NorBERTAdapter(ModelAdapter):
             self._sentiment_pipe = pipeline(
                 "text-classification",
                 model=self._sentiment_model_id,
-                return_all_scores=False,
+                top_k=1,
             )
 
     @property
