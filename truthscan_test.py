@@ -14,6 +14,8 @@ from typing import Dict, List, Any, Optional
 
 EXPECTED_ADAPTERS = ["roberta", "xlm-roberta", "norbert", "herbert"]
 
+BASE_URL = os.getenv("BACKEND_URL", "https://bjornpool-truthscan-ai-backend.hf.space")
+
 
 class TruthScanComparativeTester:
     def __init__(self, base_url="http://localhost:8000", frontend_url="http://localhost:3000"):
@@ -1204,7 +1206,7 @@ REKOMENDACJE:
 def main():
     print("🎯 TruthScan AI - Testy porównawcze NYTimes vs Polsat News")
     print("=" * 70)
-    tester = TruthScanComparativeTester()
+    tester = TruthScanComparativeTester(base_url=BASE_URL)
     success = tester.run_comparative_tests()
     print("\n" + "=" * 70)
     if success:
