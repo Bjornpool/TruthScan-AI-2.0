@@ -25,7 +25,7 @@ def get_sources():
 def benchmark(
     adapters: Optional[str] = Query(
         default=None,
-        description="Przecinkowa lista adapterów: roberta,xlm-roberta,norbert",
+        description="Przecinkowa lista adapterów: roberta,xlm-roberta,norbert,herbert",
     ),
     langs: Optional[str] = Query(
         default=None,
@@ -39,6 +39,13 @@ def benchmark(
         default=False,
         description="Czy zwrócić szczegółowe wyniki per_text (domyślnie tylko podsumowanie)",
     ),
+    mode: str = Query(
+        default="static",
+        description=(
+            "Tryb danych: 'static' = hardkodowane SAMPLE_TEXTS (powtarzalne, default), "
+            "'rss' = aktualne artykuły pobrane z RSS (BBC/NYTimes, PolsatNews/TVN24, NRK/VG)"
+        ),
+    ),
 ):
     """
     Uruchamia benchmark NLP i zwraca wyniki.
@@ -48,13 +55,14 @@ def benchmark(
 
     Przykłady:
     - GET /benchmark
-    - GET /benchmark?adapters=roberta,xlm-roberta&langs=en,pl
+    - GET /benchmark?mode=rss
+    - GET /benchmark?adapters=roberta,xlm-roberta&langs=en,pl&mode=rss
     - GET /benchmark?full=true&save=false
     """
     adapter_names = [a.strip() for a in adapters.split(",")] if adapters else None
     lang_list = [l.strip() for l in langs.split(",")] if langs else None
 
-    results = run_benchmark(adapter_names=adapter_names, langs=lang_list)
+    results = run_benchmark(adapter_names=adapter_names, langs=lang_list, mode=mode)
 
     if save:
         export_json(results, _BENCHMARK_OUT / "benchmark.json")
@@ -64,5 +72,6 @@ def benchmark(
         "results": results if full else _summary_only(results),
         "saved": save,
         "output_dir": str(_BENCHMARK_OUT) if save else None,
+        "mode": mode,
     }
 
