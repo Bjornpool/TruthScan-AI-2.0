@@ -21,10 +21,19 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from .nlp_service import get_adapter, ModelAdapter, analyze_news
+from .rss_utils import fetch_feed, clean_html, FeedFetchError
+from .config import NEWS_FEEDS
 
 # ---------------------------------------------------------------------------
 # Próbka tekstów testowych
 # ---------------------------------------------------------------------------
+
+# Źródła RSS używane w trybie mode="rss" — po 2 na język
+RSS_SOURCES: Dict[str, List[str]] = {
+    "en": ["BBC", "NYTimes"],
+    "pl": ["PolsatNews", "TVN24"],
+    "no": ["NRK", "VG"],
+}
 
 SAMPLE_TEXTS: Dict[str, List[str]] = {
     "en": [
@@ -66,6 +75,41 @@ SAMPLE_TEXTS: Dict[str, List[str]] = {
 BenchmarkResult = Dict  # TypedDict zastąpiony zwykłym Dict dla czytelności
 
 # ---------------------------------------------------------------------------
+# Pobieranie tekstów z RSS (tryb mode="rss")
+# ---------------------------------------------------------------------------
+
+def fetch_rss_texts(langs: List[str], articles_per_lang: int = 8) -> Dict[str, List[str]]:
+    """
+    Pobiera do articles_per_lang tekstów na język z kanałów RSS.
+    Dla każdego języka próbuje kolejnych źródeł z RSS_SOURCES aż do zapełnienia limitu.
+    Błędy pobierania są ignorowane (dane ze sprawnych źródeł trafiają do wyniku).
+    """
+    result: Dict[str, List[str]] = {}
+    for lang in langs:
+        sources = RSS_SOURCES.get(lang, [])
+        collected: List[str] = []
+        for source_name in sources:
+            if len(collected) >= articles_per_lang:
+                break
+            url = NEWS_FEEDS.get(source_name)
+            if not url:
+                continue
+            try:
+                feed = fetch_feed(url)
+                remaining = articles_per_lang - len(collected)
+                for entry in (feed.entries or [])[:remaining]:
+                    text = clean_html(entry.get("summary", "")).strip()
+                    if not text:
+                        text = entry.get("title", "").strip()
+                    if len(text) >= 20:
+                        collected.append(text)
+            except Exception:
+                pass
+        result[lang] = collected
+    return result
+
+
+# ---------------------------------------------------------------------------
 # Funkcje benchmarkowania
 # ---------------------------------------------------------------------------
 
@@ -84,13 +128,16 @@ def _run_single(
 def run_benchmark(
     adapter_names: Optional[List[str]] = None,
     langs: Optional[List[str]] = None,
+    mode: str = "static",
 ) -> List[BenchmarkResult]:
     """
     Uruchamia benchmark dla wskazanych adapterów i języków.
 
     Args:
-        adapter_names: Lista nazw adapterów; None = wszystkie trzy.
+        adapter_names: Lista nazw adapterów; None = wszystkie cztery.
         langs:         Lista kodów języków; None = ['en', 'pl', 'no'].
+        mode:          'static' = hardkodowane SAMPLE_TEXTS (powtarzalne),
+                       'rss'    = aktualne artykuły z kanałów RSS.
 
     Returns:
         Lista słowników z wynikami — jeden wpis na kombinację adapter × język.
@@ -99,6 +146,11 @@ def run_benchmark(
         adapter_names = ["roberta", "xlm-roberta", "norbert", "herbert"]
     if langs is None:
         langs = ["en", "pl", "no"]
+
+    if mode == "rss":
+        texts_by_lang = fetch_rss_texts(langs)
+    else:
+        texts_by_lang = {lang: SAMPLE_TEXTS.get(lang, []) for lang in langs}
 
     results: List[BenchmarkResult] = []
 
@@ -113,8 +165,18 @@ def run_benchmark(
             continue
 
         for lang in langs:
-            texts = SAMPLE_TEXTS.get(lang, [])
+            texts = texts_by_lang.get(lang, [])
             if not texts:
+                if mode == "rss":
+                    results.append({
+                        "adapter_name": adapter_name,
+                        "language": lang,
+                        "mode": mode,
+                        "error": (
+                            f"Nie udało się pobrać artykułów RSS dla języka '{lang}' "
+                            f"ze źródeł: {RSS_SOURCES.get(lang, [])}"
+                        ),
+                    })
                 continue
 
             per_text: List[Dict] = []
@@ -139,6 +201,7 @@ def run_benchmark(
             results.append({
                 "adapter_name": adapter_name,
                 "language": lang,
+                "mode": mode,
                 "sample_size": len(texts),
                 "successful_runs": len(valid),
                 "avg_inference_time_ms": round(sum(times) / len(times), 2) if times else None,
@@ -170,7 +233,7 @@ def export_csv(results: List[BenchmarkResult], path: Path) -> None:
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     summary_fields = [
-        "adapter_name", "language", "sample_size", "successful_runs",
+        "adapter_name", "language", "mode", "sample_size", "successful_runs",
         "avg_inference_time_ms", "min_inference_time_ms", "max_inference_time_ms",
         "avg_fake_probability", "sentiments_distribution",
     ]
@@ -213,14 +276,18 @@ if __name__ == "__main__":
         "--out-dir", default="benchmark_results",
         help="Katalog wyjściowy dla plików JSON i CSV",
     )
+    parser.add_argument(
+        "--mode", default="static", choices=["static", "rss"],
+        help="Tryb danych: static = SAMPLE_TEXTS (domyślnie), rss = aktualne artykuły RSS",
+    )
     args = parser.parse_args()
 
     adapter_names = [a.strip() for a in args.adapters.split(",")]
     langs = [l.strip() for l in args.langs.split(",")]
     out_dir = Path(args.out_dir)
 
-    print(f"Uruchamiam benchmark: adaptery={adapter_names}, języki={langs}")
-    results = run_benchmark(adapter_names=adapter_names, langs=langs)
+    print(f"Uruchamiam benchmark: adaptery={adapter_names}, języki={langs}, mode={args.mode}")
+    results = run_benchmark(adapter_names=adapter_names, langs=langs, mode=args.mode)
 
     json_path = out_dir / "benchmark.json"
     csv_path = out_dir / "benchmark.csv"

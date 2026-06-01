@@ -73,6 +73,10 @@ const i18n = {
     title:       "Analiza i porównanie modeli NLP",
     subtitle:    "Porównanie czasu inferencji, rozkładu sentymentów i prawdopodobieństwa fake newsów",
     intro:       "System przeprowadza analizę porównawczą czterech modeli NLP (RoBERTa, XLM-RoBERTa, NorBERT 3, HerBERT) na rzeczywistych artykułach prasowych w trzech językach: polskim, norweskim i angielskim. Każdy model analizuje 8 artykułów per język — łącznie 96 analiz. Wyniki pokazują czas odpowiedzi modelu, rozkład sentymentu oraz prawdopodobieństwo dezinformacji według modelu BART.",
+    introRss:    "System pobiera na żywo aktualne artykuły z sześciu kanałów RSS (BBC i NYTimes dla EN, Polsat News i TVN24 dla PL, NRK i VG dla NO) i przepuszcza je przez cztery modele NLP (RoBERTa, XLM-RoBERTa, NorBERT 3, HerBERT). Wyniki zmieniają się przy każdym uruchomieniu, odzwierciedlając bieżące doniesienia medialne.",
+    modeLabel:   "Źródło danych:",
+    modeRss:     "Live RSS (aktualne artykuły)",
+    modeStatic:  "Statyczne zdania testowe",
     runBtn:      "Uruchom analizę porównawczą",
     csvBtn:      "Pobierz CSV",
     running:     "Trwa analiza porównawcza... (może potrwać 2–3 minuty)",
@@ -107,6 +111,10 @@ const i18n = {
     title:       "NLP Model Analysis and Comparison",
     subtitle:    "Comparison of inference time, sentiment distribution and fake news probability",
     intro:       "The system performs a comparative analysis of four NLP models (RoBERTa, XLM-RoBERTa, NorBERT 3, HerBERT) on real news articles in three languages: Polish, Norwegian and English. Each model analyses 8 articles per language — 96 analyses in total. Results show model response time, sentiment distribution and fake news probability according to the BART model.",
+    introRss:    "The system fetches live articles from six RSS feeds (BBC and NYTimes for EN, Polsat News and TVN24 for PL, NRK and VG for NO) and runs them through four NLP models (RoBERTa, XLM-RoBERTa, NorBERT 3, HerBERT). Results change with each run, reflecting current news coverage.",
+    modeLabel:   "Data source:",
+    modeRss:     "Live RSS (current articles)",
+    modeStatic:  "Static test sentences",
     runBtn:      "Run comparative analysis",
     csvBtn:      "Download CSV",
     running:     "Running comparative analysis... (may take 2–3 minutes)",
@@ -141,6 +149,10 @@ const i18n = {
     title:       "Analyse og sammenligning av NLP-modeller",
     subtitle:    "Sammenligning av inferenstid, sentimentfordeling og sannsynlighet for falske nyheter",
     intro:       "Systemet utfører en komparativ analyse av fire NLP-modeller (RoBERTa, XLM-RoBERTa, NorBERT 3, HerBERT) på ekte nyhetsartikler på tre språk: polsk, norsk og engelsk. Hver modell analyserer 8 artikler per språk — totalt 96 analyser. Resultatene viser modellens svartid, sentimentfordeling og sannsynlighet for feilinformasjon ifølge BART-modellen.",
+    introRss:    "Systemet henter live artikler fra seks RSS-kanaler (BBC og NYTimes for EN, Polsat News og TVN24 for PL, NRK og VG for NO) og kjører dem gjennom fire NLP-modeller (RoBERTa, XLM-RoBERTa, NorBERT 3, HerBERT). Resultatene endres ved hvert kjøring og gjenspeiler den aktuelle nyhetsdekningen.",
+    modeLabel:   "Datakilde:",
+    modeRss:     "Live RSS (aktuelle artikler)",
+    modeStatic:  "Statiske testsetninger",
     runBtn:      "Kjør komparativ analyse",
     csvBtn:      "Last ned CSV",
     running:     "Kjører komparativ analyse... (kan ta 2–3 minutter)",
@@ -183,6 +195,7 @@ export default function BenchmarkPage() {
   const [activeModel, setActiveModel] = useState<string | null>(null);
   const [aiComment, setAiComment]     = useState<string | null>(null);
   const [aiLoading, setAiLoading]     = useState(false);
+  const [mode, setMode]               = useState<"rss" | "static">("rss");
 
   useEffect(() => {
     const stored = localStorage.getItem("lang");
@@ -238,7 +251,7 @@ export default function BenchmarkPage() {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
       const controller = new AbortController();
       const tid = setTimeout(() => controller.abort(), 300_000); // 5 min timeout
-      const res = await fetch(`${apiBase}/benchmark?full=false`, { signal: controller.signal });
+      const res = await fetch(`${apiBase}/benchmark?full=false&mode=${mode}`, { signal: controller.signal });
       clearTimeout(tid);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -324,7 +337,36 @@ export default function BenchmarkPage() {
 
         {/* Intro */}
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl px-6 py-4 text-sm text-gray-700 dark:text-gray-300 leading-relaxed max-w-3xl mx-auto">
-          {t.intro}
+          {mode === "rss" ? (t as any).introRss : t.intro}
+        </div>
+
+        {/* Mode toggle */}
+        <div className="flex justify-center items-center gap-3 flex-wrap">
+          <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+            {(t as any).modeLabel}
+          </span>
+          <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+            <button
+              onClick={() => setMode("rss")}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                mode === "rss"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              }`}
+            >
+              {(t as any).modeRss}
+            </button>
+            <button
+              onClick={() => setMode("static")}
+              className={`px-4 py-2 text-sm font-medium transition-colors border-l border-gray-200 dark:border-gray-700 ${
+                mode === "static"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              }`}
+            >
+              {(t as any).modeStatic}
+            </button>
+          </div>
         </div>
 
         {/* Run button + CSV download */}
