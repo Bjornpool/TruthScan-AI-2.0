@@ -78,34 +78,77 @@ BenchmarkResult = Dict  # TypedDict zastąpiony zwykłym Dict dla czytelności
 # Pobieranie tekstów z RSS (tryb mode="rss")
 # ---------------------------------------------------------------------------
 
+def _texts_from_feed(feed, limit: int) -> List[str]:
+    """Wyciąga do limit czystych tekstów z feedu (kolejność zgodna z feedem)."""
+    out: List[str] = []
+    for entry in feed.entries or []:
+        if len(out) >= limit:
+            break
+        text = clean_html(entry.get("summary", "")).strip()
+        if not text:
+            text = entry.get("title", "").strip()
+        if len(text) >= 20:
+            out.append(text)
+    return out
+
+
 def fetch_rss_texts(langs: List[str], articles_per_lang: int = 8) -> Dict[str, List[str]]:
     """
-    Pobiera do articles_per_lang tekstów na język z kanałów RSS.
-    Dla każdego języka próbuje kolejnych źródeł z RSS_SOURCES aż do zapełnienia limitu.
-    Błędy pobierania są ignorowane (dane ze sprawnych źródeł trafiają do wyniku).
+    Pobiera artykuły RSS z równym podziałem na źródła.
+
+    Algorytm (dla 2 źródeł i articles_per_lang=8):
+      1. Pierwsza faza — każde źródło dostaje kwotę articles_per_lang // n_sources = 4.
+      2. Druga faza — jeśli któreś źródło dostarczyło mniej niż kwota (np. ma tylko 2
+         artykuły albo nie odpowiada), brakujące artykuły są dobierane z pozostałych
+         źródeł (artykuły już wzięte są pomijane po stronie set używanych tekstów).
+
+    Przykłady:
+      BBC=4, NYTimes=4             → [b1..b4, n1..n4]           (równy podział)
+      BBC=2, NYTimes=4             → [b1, b2, n1..n4, n5, n6]   (NYTimes uzupełnia)
+      BBC=błąd, NYTimes=8          → [n1..n8]                    (cały limit z NYTimes)
+      BBC=3, NYTimes=3             → [b1..b3, n1..n3]            (łącznie 6, brak rezerwy)
     """
     result: Dict[str, List[str]] = {}
     for lang in langs:
         sources = RSS_SOURCES.get(lang, [])
-        collected: List[str] = []
+        n = len(sources)
+        quota = articles_per_lang // n if n else articles_per_lang
+
+        # Faza 1: pobierz quota artykułów z każdego źródła
+        buckets: List[List[str]] = []
+        feeds_cache: List[object] = []
         for source_name in sources:
-            if len(collected) >= articles_per_lang:
-                break
             url = NEWS_FEEDS.get(source_name)
             if not url:
+                buckets.append([])
+                feeds_cache.append(None)
                 continue
             try:
                 feed = fetch_feed(url)
-                remaining = articles_per_lang - len(collected)
-                for entry in (feed.entries or [])[:remaining]:
-                    text = clean_html(entry.get("summary", "")).strip()
-                    if not text:
-                        text = entry.get("title", "").strip()
-                    if len(text) >= 20:
-                        collected.append(text)
+                feeds_cache.append(feed)
+                buckets.append(_texts_from_feed(feed, quota))
             except Exception:
-                pass
-        result[lang] = collected
+                buckets.append([])
+                feeds_cache.append(None)
+
+        collected = [t for bucket in buckets for t in bucket]
+
+        # Faza 2: uzupełnij niedobór z dowolnego źródła mającego więcej artykułów
+        shortfall = articles_per_lang - len(collected)
+        if shortfall > 0:
+            used = set(collected)
+            for feed in feeds_cache:
+                if shortfall <= 0 or feed is None:
+                    continue
+                for text in _texts_from_feed(feed, articles_per_lang):
+                    if shortfall <= 0:
+                        break
+                    if text not in used:
+                        collected.append(text)
+                        used.add(text)
+                        shortfall -= 1
+
+        result[lang] = collected[:articles_per_lang]
     return result
 
 
