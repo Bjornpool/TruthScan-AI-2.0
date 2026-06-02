@@ -46,19 +46,25 @@ export default function NavBar() {
 
  return (
     <nav className="sticky top-0 z-50 bg-gray-100 dark:bg-gray-900 shadow-md border-b border-gray-300/20 dark:border-gray-700/50">
-      <div className="w-full flex justify-between items-center px-4 md:px-6 h-14">
+      <div className="w-full flex justify-between items-center px-2 sm:px-4 md:px-6 h-14 min-w-0">
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-1 sm:gap-4 md:gap-6 min-w-0">
           <Logo />
 
-          <div className="flex items-center gap-6 relative">
+          <div className="flex items-center gap-0 sm:gap-4 md:gap-6 relative">
             {links.map(({ href, labelPl, labelEn, labelNo, Icon }) => {
               const active = pathname === href || (href !== "/" && pathname.startsWith(href));
               return (
                 <div key={href} className="relative">
-                  <Link href={href} className="inline-flex items-center gap-1.5">
-                    <Icon className="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" />
-                    {language === "pl" ? labelPl : language === "no" ? labelNo : labelEn}
+                  <Link
+                    href={href}
+                    className="inline-flex items-center gap-1.5 p-2 sm:p-0 rounded-md"
+                    title={language === "pl" ? labelPl : language === "no" ? labelNo : labelEn}
+                  >
+                    <Icon className="w-4 h-4 text-gray-500 dark:text-gray-400 shrink-0" aria-hidden="true" />
+                    <span className="hidden sm:inline whitespace-nowrap">
+                      {language === "pl" ? labelPl : language === "no" ? labelNo : labelEn}
+                    </span>
                   </Link>
 
                   {active && (
@@ -74,7 +80,7 @@ export default function NavBar() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           <LanguageSwitcher language={language} setLanguage={setLanguage} />
           <DarkModeToggle />
         </div>
