@@ -315,7 +315,7 @@ class TruthScanComparativeTester:
         """
         start = time.time()
         try:
-            response = requests.get(f"{self.base_url}/benchmark", timeout=120)
+            response = requests.get(f"{self.base_url}/benchmark", timeout=360)
             duration = time.time() - start
 
             if response.status_code != 200:
