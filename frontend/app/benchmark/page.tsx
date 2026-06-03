@@ -79,7 +79,7 @@ const i18n = {
     modeStatic:  "Statyczne zdania testowe",
     runBtn:      "Uruchom analizę porównawczą",
     csvBtn:      "Pobierz CSV",
-    running:     "Trwa analiza porównawcza... (może potrwać 2–3 minuty)",
+    running:     "Analiza może potrwać do 6 minut...",
     chart1:      "Czasy inferencji (ms)",
     chart1Desc:  "Niższy wynik oznacza szybszy model. Pierwsze uruchomienie modelu może być wolniejsze ze względu na ładowanie do pamięci.",
     chart2:      "Rozkład sentymentów",
@@ -117,7 +117,7 @@ const i18n = {
     modeStatic:  "Static test sentences",
     runBtn:      "Run comparative analysis",
     csvBtn:      "Download CSV",
-    running:     "Running comparative analysis... (may take 2–3 minutes)",
+    running:     "Analysis may take up to 6 minutes...",
     chart1:      "Inference time (ms)",
     chart1Desc:  "Lower score means a faster model. The first model run may be slower due to loading into memory.",
     chart2:      "Sentiment distribution",
@@ -155,7 +155,7 @@ const i18n = {
     modeStatic:  "Statiske testsetninger",
     runBtn:      "Kjør komparativ analyse",
     csvBtn:      "Last ned CSV",
-    running:     "Kjører komparativ analyse... (kan ta 2–3 minutter)",
+    running:     "Analysen kan ta opptil 6 minutter...",
     chart1:      "Inferenstid (ms)",
     chart1Desc:  "Lavere score betyr en raskere modell. Første kjøring av modellen kan være tregere på grunn av innlasting i minnet.",
     chart2:      "Sentimentfordeling",
@@ -250,7 +250,7 @@ export default function BenchmarkPage() {
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
       const controller = new AbortController();
-      const tid = setTimeout(() => controller.abort(), 300_000); // 5 min timeout
+      const tid = setTimeout(() => controller.abort(), 360_000); // 6 min timeout
       const res = await fetch(`${apiBase}/benchmark?full=false&mode=${mode}`, { signal: controller.signal });
       clearTimeout(tid);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
