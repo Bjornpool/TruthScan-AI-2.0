@@ -500,7 +500,7 @@ class TruthScanComparativeTester:
                         "timestamp": ts,
                     })
                 else:
-                    sentiments_str = "; ".join(
+                    sentiments_str = " | ".join(
                         f"{k}={v}"
                         for k, v in r.get("sentiments_distribution", {}).items()
                     )
@@ -531,7 +531,7 @@ class TruthScanComparativeTester:
         ]
 
         with open(filename, "w", newline="", encoding="utf-8-sig") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter=";")
             writer.writeheader()
             writer.writerows(rows)
 
