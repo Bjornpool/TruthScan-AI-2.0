@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from .nlp_service import get_adapter, ModelAdapter, analyze_news
-from .rss_utils import fetch_feed, clean_html, FeedFetchError, is_recent_entry
+from .rss_utils import fetch_feed, clean_html, FeedFetchError
 from .config import NEWS_FEEDS
 
 # ---------------------------------------------------------------------------
@@ -80,14 +80,11 @@ BenchmarkResult = Dict  # TypedDict zastąpiony zwykłym Dict dla czytelności
 # ---------------------------------------------------------------------------
 
 def _texts_from_feed(feed, limit: int) -> List[str]:
-    """Wyciąga do limit czystych tekstów z feedu (kolejność zgodna z feedem).
-    Pomija artykuły starsze niż 30 dni."""
+    """Wyciąga do limit czystych tekstów z feedu (kolejność zgodna z feedem)."""
     out: List[str] = []
     for entry in feed.entries or []:
         if len(out) >= limit:
             break
-        if not is_recent_entry(entry):
-            continue
         text = clean_html(entry.get("summary", "")).strip()
         if not text:
             text = entry.get("title", "").strip()

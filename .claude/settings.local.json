@@ -3,11 +3,7 @@
     "allow": [
       "Bash(curl:*)",
       "Bash(pip install:*)",
-      "WebSearch",
-      "Bash(git add *)",
-      "Bash(git push *)",
-      "Bash(git commit -m ' *)",
-      "Bash(git pull *)"
+      "WebSearch"
     ]
   }
 }

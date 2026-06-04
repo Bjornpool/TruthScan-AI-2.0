@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Raport porównawczy TruthScan AI - BBC vs Gazeta Prawna</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: #f0f2f5;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 10px; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        h1 { 
+            color: #2c3e50; 
+            text-align: center; 
+            margin-bottom: 20px; 
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .header { 
+            text-align: center; 
+            margin-bottom: 30px; 
+        }
+        .test-date { 
+            color: #7f8c8d; 
+            font-size: 1em; 
+            margin-top: 5px;
+        }
+        
+        .comparison-section { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+            gap: 20px; 
+            margin-bottom: 30px;
+        }
+        .comparison-card { 
+            background: #fff; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            border-left: 4px solid #3498db;
+        }
+        .comparison-card h3 { 
+            color: #2c3e50; 
+            margin-top: 0;
+        }
+        
+        .chart-container { 
+            position: relative; 
+            height: 250px; 
+            margin: 15px 0;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-box { 
+            padding: 15px;
+            border-radius: 6px;
+            color: white;
+            text-align: center;
+        }
+        .bbc-stat { 
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+        .gazeta-stat { 
+            background: linear-gradient(135deg, #27ae60, #229954);
+        }
+        
+        .source-details { 
+            background: #ecf0f1; 
+            padding: 15px; 
+            border-radius: 6px; 
+            margin: 20px 0;
+        }
+        
+        .results-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 20px;
+        }
+        .results-table th, .results-table td { 
+            padding: 12px; 
+            text-align: left; 
+            border-bottom: 1px solid #ddd;
+        }
+        .results-table th { 
+            background-color: #3498db; 
+            color: white;
+        }
+        .results-table tr:hover { 
+            background-color: #f5f5f5;
+        }
+        
+        .pass { color: #27ae60; font-weight: bold; }
+        .fail { color: #e74c3c; font-weight: bold; }
+        .warn { color: #f39c12; font-weight: bold; }
+        
+        .insights { 
+            background: #2c3e50; 
+            color: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin-top: 30px;
+        }
+        
+        .footer { 
+            text-align: center; 
+            margin-top: 30px; 
+            color: #7f8c8d; 
+            font-size: 0.9em;
+            border-top: 1px solid #ecf0f1;
+            padding-top: 15px;
+        }
+        
+        .highlight { 
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #ffc107;
+            margin: 15px 0;
+        }
+        .conclusions { 
+            background: #2c3e50; 
+            color: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 RAPORT PORÓWNAWCZY TRUTHSCAN AI</h1>
+            <h2>BBC vs Gazeta Prawna - Analiza systemu detekcji dezinformacji</h2>
+            <div class="test-date">Data testów: 20.12.2025 08:56:33</div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-box bbc-stat">
+                <h3>BBC</h3>
+                <p>Artykułów: 5</p>
+                <p>Fake: 25.5%</p>
+                <p>Czas: 5.22s</p>
+            </div>
+            <div class="stat-box gazeta-stat">
+                <h3>Gazeta Prawna</h3>
+                <p>Artykułów: 5</p>
+                <p>Fake: 17.2%</p>
+                <p>Czas: 15.03s</p>
+            </div>
+        </div>
+        
+        <div class="comparison-section">
+            <div class="comparison-card">
+                <h3>📈 Średnie ryzyko dezinformacji</h3>
+                <div class="chart-container">
+                    <canvas id="fakeScoreChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="comparison-card">
+                <h3>⚡ Wydajność systemu</h3>
+                <div class="chart-container">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="comparison-section">
+            <div class="comparison-card">
+                <h3>🎭 Rozkład sentymentu - BBC</h3>
+                <div class="chart-container">
+                    <canvas id="bbcSentimentChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="comparison-card">
+                <h3>🎭 Rozkład sentymentu - Gazeta Prawna</h3>
+                <div class="chart-container">
+                    <canvas id="gazetaSentimentChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="highlight">
+            <h4>🔍 Kluczowe różnice:</h4>
+            <p>• Różnica w ryzyku dezinformacji: <strong>8.3%</strong></p>
+            <p>• Różnica w czasie analizy: <strong>9.81s</strong></p>
+            <p style='color: #27ae60;'>• ✅ Spójna skuteczność detekcji między językami</p>
+        </div>
+        
+        <div class="source-details">
+            <h4>📰 Przykładowe artykuły z analizą</h4>
+            
+            <h5>BBC:</h5><p><strong>1.</strong> Who and what is in the Epstein files?...</p><p><strong>2.</strong> David Walliams denies inappropriate behaviour after publisher drops him...</p>
+            <h5>Gazeta Prawna:</h5><p><strong>1.</strong> Fałszywe oskarżenia na policji mogą zrujnować życie – sprawdź, kiedy grozi za ni...</p><p><strong>2.</strong> Polacy za granicą: w tym kraju mieszka ich tylko dwoje. Zamiast polskiej zimy ma...</p>
+        </div>
+        
+        <h3>📋 Wyniki testów (7/7 przepuszczonych)</h3>
+        <table class="results-table">
+            <thead>
+                <tr>
+                    <th>Test</th>
+                    <th>Status</th>
+                    <th>Szczegóły</th>
+                    <th>Czas [s]</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>API Availability</td>
+                    <td class="pass">✅ PASS</td>
+                    <td>Swagger UI dostępny (200)</td>
+                    <td>2.07</td>
+                </tr>
+                <tr>
+                    <td>GET /sources</td>
+                    <td class="pass">✅ PASS</td>
+                    <td>Znaleziono 10 źródeł | ✅ BBC dostępne | ✅ Gazeta Prawna dostępne</td>
+                    <td>2.06</td>
+                </tr>
+                <tr>
+                    <td>GET /news/BBC</td>
+                    <td class="pass">✅ PASS</td>
+                    <td>Pobrano 5 artykułów | Źródło: BBC | Pola: title, sentiment, fake_probability, summary, link, published | Przykład: 'Who and what is in the Epstein files?'</td>
+                    <td>5.22</td>
+                </tr>
+                <tr>
+                    <td>GET /news/GazetaPrawna</td>
+                    <td class="pass">✅ PASS</td>
+                    <td>Pobrano 5 artykułów | Źródło: GazetaPrawna | Pola: title, sentiment, fake_probability, summary, link, published | Przykład: 'Fałszywe oskarżenia na policji mogą zrujnować życi...'</td>
+                    <td>15.03</td>
+                </tr>
+                <tr>
+                    <td>Source Comparison</td>
+                    <td class="pass">✅ PASS</td>
+                    <td>BBC: 5 art, 25.5% fake, 5.2s | Gazeta: 5 art, 17.2% fake, 15.0s</td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td>CRUD Operations - BBC</td>
+                    <td class="pass">✅ PASS</td>
+                    <td>Zapis: ✅ (2.07s) | Odczyt: ✅ (15 artykułów, 2.09s) | Usuwanie: ✅ (Status: 200)</td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td>CRUD Operations - GazetaPrawna</td>
+                    <td class="pass">✅ PASS</td>
+                    <td>Zapis: ✅ (2.06s) | Odczyt: ✅ (15 artykułów, 2.11s) | Usuwanie: ✅ (Status: 200)</td>
+                    <td>-</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="conclusions">
+            <h4>Wnioski i rekomendacje</h4>
+            
+            <h5>Kluczowe wnioski:</h5>
+            <ul>
+                <li>System skutecznie analizuje źródła anglojęzyczne i polskojęzyczne</li>
+                <li>Analiza treści polskich zajmuje więcej czasu: różnica 12.91s</li>
+                <li>Różnica w wykrywaniu dezinformacji między źródłami: 0.1%</li>
+                <li>Spójna skuteczność detekcji między językami</li>
+            </ul>
+            
+            <h5>Rekomendacje:</h5>
+            <ol>
+                <li>Fine-tuning modeli NLP na polskich danych fact-checkingowych</li>
+                <li>Optymalizacja parsowania polskich znaków diakrytycznych</li>
+                <li>Implementacja cache'owania wyników dla często analizowanych źródeł</li>
+                <li>Rozszerzenie testów o więcej polskich źródeł informacji</li>
+                <li>Przeprowadzenie testów z rzeczywistymi użytkownikami</li>
+            </ol>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>Raport wygenerowany automatycznie przez TruthScan AI Comparative Tester</p>
+        <p>System TruthScan AI - Prototyp do walki z dezinformacją</p>
+        <p>Wskaźnik sukcesu testów: 100.0% | Błędy: 0</p>
+    </div>
+</div>
+
+<script>
+    // Wykres ryzyka dezinformacji
+    const fakeScoreCtx = document.getElementById('fakeScoreChart').getContext('2d');
+    new Chart(fakeScoreCtx, {
+        type: 'bar',
+        data: {
+            labels: ["BBC", "Gazeta Prawna"],
+            datasets: [{
+                label: 'Średnie ryzyko dezinformacji (%)',
+                data: [25.47, 17.156],
+                backgroundColor: ['#e74c3c', '#27ae60'],
+                borderColor: ['#c0392b', '#229954'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: true, position: 'top' }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: Math.max(25.47, 50),
+                    title: {
+                        display: true,
+                        text: 'Procent ryzyka'
+                    }
+                }
+            }
+        }
+    });
+    
+    // Wykres wydajności
+    const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+    new Chart(performanceCtx, {
+        type: 'line',
+        data: {
+            labels: ["BBC", "Gazeta Prawna"],
+            datasets: [{
+                label: 'Czas analizy (sekundy)',
+                data: [5.216013669967651, 15.029404878616333],
+                backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                borderColor: '#3498db',
+                borderWidth: 2,
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: true, position: 'top' }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Czas (s)'
+                    }
+                }
+            }
+        }
+    });
+    
+    // Funkcja pomocnicza do mapowania sentymentów na kolory
+    function getSentimentColors(labels) {
+        const colorMap = {
+            'Negatywne': '#e74c3c',  // czerwony
+            'Neutralne': '#3498db',   // niebieski
+            'Pozytywne': '#2ecc71',   // zielony
+            'bardzo negatywne': '#c0392b',
+            'bardzo pozytywne': '#27ae60'
+        };
+        
+        return labels.map(label => colorMap[label] || '#95a5a6');
+    }
+    
+    // Wykresy sentymentu
+    const bbcSentimentCtx = document.getElementById('bbcSentimentChart').getContext('2d');
+    new Chart(bbcSentimentCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ["Neutralne", "Pozytywne", "Negatywne"],
+            datasets: [{
+                data: [3, 1, 1],
+                backgroundColor: getSentimentColors(["Neutralne", "Pozytywne", "Negatywne"]),
+                hoverOffset: 10
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+    
+    const gazetaSentimentCtx = document.getElementById('gazetaSentimentChart').getContext('2d');
+    new Chart(gazetaSentimentCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ["Neutralne"],
+            datasets: [{
+                data: [5],
+                backgroundColor: getSentimentColors(["Neutralne"]),
+                hoverOffset: 10
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+</script>
+</body>
+</html>
