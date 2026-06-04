@@ -128,13 +128,13 @@ export default function ArticleCard({
 
   const renderDescription = () => {
     const desc = article.summary || article.description || "";
+    if (!desc) return null;
     return (
       <p className={[
         "text-gray-700 dark:text-gray-300",
-        isCompact ? "text-sm line-clamp-3 mb-2" : "mb-3",
-        !desc ? "italic opacity-50" : "",
+        isCompact ? "text-sm line-clamp-3 mb-2" : "mb-3"
       ].join(" ")}>
-        {desc || t.noDescription}
+        {desc}
       </p>
     );
   };
