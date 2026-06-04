@@ -26,7 +26,7 @@ def is_recent_entry(entry, max_age_days: int = _MAX_ARTICLE_AGE_DAYS) -> bool:
     """
     parsed = entry.get("published_parsed") if hasattr(entry, "get") else getattr(entry, "published_parsed", None)
     if parsed is None:
-        return False
+        return True
     cutoff = time.time() - max_age_days * 86_400
     return calendar.timegm(parsed) >= cutoff
 
