@@ -53,15 +53,15 @@ def get_news(source: str, lang: str = "pl", model: str = "roberta"):
 
     # Przetwarzanie i analiza artykułów (CNN: pierwsze 3; reszta: ostatnie 30 dni)
     for entry in filter_entries(feed.entries, source)[:MAX_ARTICLES]:
-        summary = clean_html(entry.get("summary", "Brak opisu"))
+        summary = clean_html(entry.get("summary", ""))
         text_to_analyze = (summary or "").strip() or entry.get("title", "")
         analysis = analyze_news(text_to_analyze, lang)
 
         articles.append({
-            "title": entry.get("title", "Bez tytułu"),
+            "title": entry.get("title", ""),
             "link": entry.get("link", ""),
             "summary": summary,
-            "published": entry.get("published", "Brak daty"),
+            "published": entry.get("published", ""),
             "source": source,
             "model": model,
             **analysis
@@ -110,7 +110,7 @@ async def stream_news(source: str, lang: str = "pl", model: str = "roberta"):
 
         sent = 0
         for entry in to_send:
-            summary = clean_html(entry.get("summary", "Brak opisu"))
+            summary = clean_html(entry.get("summary", ""))
             text_to_analyze = (summary or "").strip() or entry.get("title", "")
 
             # Analiza NLP uruchamiana w executorze (CPU-bound)
@@ -120,10 +120,10 @@ async def stream_news(source: str, lang: str = "pl", model: str = "roberta"):
             )
 
             article = {
-                "title": entry.get("title", "Bez tytułu"),
+                "title": entry.get("title", ""),
                 "link": entry.get("link", ""),
                 "summary": summary,
-                "published": entry.get("published", "Brak daty"),
+                "published": entry.get("published", ""),
                 "source": source,
                 "model": model,
                 **analysis,
