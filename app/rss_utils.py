@@ -17,11 +17,14 @@ _cache_data: Dict[str, tuple[Any, float]] = {}
 
 _MAX_ARTICLE_AGE_DAYS = 30
 
+# Źródła z nieregularnymi datami — pobierane przez pozycję, nie przez datę
+_NO_DATE_FILTER_SOURCES = {"CNN"}
+
 
 def is_recent_entry(entry, max_age_days: int = _MAX_ARTICLE_AGE_DAYS) -> bool:
     """
     Zwraca True jeśli artykuł nie jest starszy niż max_age_days.
-    Artykuły bez pola published_parsed są przepuszczane (brak daty nie dyskwalifikuje).
+    Artykuły bez published_parsed są odrzucane (brak daty = odrzuć).
     published_parsed to time.struct_time UTC z feedparser — konwertowany przez calendar.timegm.
     """
     parsed = entry.get("published_parsed") if hasattr(entry, "get") else getattr(entry, "published_parsed", None)
@@ -29,6 +32,17 @@ def is_recent_entry(entry, max_age_days: int = _MAX_ARTICLE_AGE_DAYS) -> bool:
         return False
     cutoff = time.time() - max_age_days * 86_400
     return calendar.timegm(parsed) >= cutoff
+
+
+def filter_entries(entries, source: str = "") -> list:
+    """
+    Filtruje wpisy feedu według strategii zależnej od źródła.
+    CNN: pierwsze 3 wpisy bez sprawdzania daty (CNN nie ustawia published_parsed).
+    Pozostałe: is_recent_entry — odrzuca wpisy starsze niż 30 dni lub bez daty.
+    """
+    if source in _NO_DATE_FILTER_SOURCES:
+        return list(entries[:3])
+    return [e for e in entries if is_recent_entry(e)]
 
 
 def clean_html(text: str) -> str:

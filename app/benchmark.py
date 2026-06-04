@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from .nlp_service import get_adapter, ModelAdapter, analyze_news
-from .rss_utils import fetch_feed, clean_html, FeedFetchError, is_recent_entry
+from .rss_utils import fetch_feed, clean_html, FeedFetchError, filter_entries
 from .config import NEWS_FEEDS
 
 # ---------------------------------------------------------------------------
@@ -79,15 +79,13 @@ BenchmarkResult = Dict  # TypedDict zastąpiony zwykłym Dict dla czytelności
 # Pobieranie tekstów z RSS (tryb mode="rss")
 # ---------------------------------------------------------------------------
 
-def _texts_from_feed(feed, limit: int) -> List[str]:
-    """Wyciąga do limit czystych tekstów z feedu (kolejność zgodna z feedem).
-    Pomija artykuły starsze niż 30 dni."""
+def _texts_from_feed(entries, limit: int) -> List[str]:
+    """Wyciąga do limit czystych tekstów z listy wpisów (kolejność zgodna z feedem).
+    Filtrowanie po dacie/źródle wykonuje wywołujący przez filter_entries()."""
     out: List[str] = []
-    for entry in feed.entries or []:
+    for entry in entries or []:
         if len(out) >= limit:
             break
-        if not is_recent_entry(entry):
-            continue
         text = clean_html(entry.get("summary", "")).strip()
         if not text:
             text = entry.get("title", "").strip()
@@ -103,7 +101,8 @@ def _fetch_source(source_name: str, quota: int) -> Tuple[object, List[str]]:
         return None, []
     try:
         feed = fetch_feed(url)
-        return feed, _texts_from_feed(feed, quota)
+        entries = filter_entries(feed.entries or [], source_name)
+        return feed, _texts_from_feed(entries, quota)
     except Exception:
         return None, []
 
@@ -146,10 +145,10 @@ def fetch_rss_texts(langs: List[str], articles_per_lang: int = 8) -> Dict[str, L
         shortfall = articles_per_lang - len(collected)
         if shortfall > 0:
             used = set(collected)
-            for feed in feeds_cache:
+            for feed, src in zip(feeds_cache, sources):
                 if shortfall <= 0 or feed is None:
                     continue
-                for text in _texts_from_feed(feed, articles_per_lang):
+                for text in _texts_from_feed(filter_entries(feed.entries or [], src), articles_per_lang):
                     if shortfall <= 0:
                         break
                     if text not in used:
