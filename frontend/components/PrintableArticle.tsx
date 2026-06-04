@@ -11,6 +11,7 @@
 "use client";
 
 import React from 'react';
+import locales from '../lib/locales';
 import type { Lang } from '../lib/types';
 
 interface PrintableArticleProps {
@@ -33,6 +34,7 @@ export const PrintableArticle: React.FC<PrintableArticleProps> = ({
   language,
   onClose
 }) => {
+  const t = locales[language] ?? locales.pl;
   const T = (pl: string, no: string, en: string) =>
     language === "pl" ? pl : language === "no" ? no : en;
 
@@ -51,7 +53,7 @@ export const PrintableArticle: React.FC<PrintableArticleProps> = ({
         <div className="metadata">
           <div className="meta-item">
             <span className="meta-label">📅 {T("Data", "Dato", "Date")}:</span>
-            {article.published || T("Brak daty", "Ingen dato", "No date")}
+            {article.published || t.noDate}
           </div>
           <div className="meta-item">
             <span className="meta-label">📰 {T("Źródło", "Kilde", "Source")}:</span>
