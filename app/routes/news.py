@@ -31,19 +31,14 @@ def get_news(source: str, lang: str = "pl", model: str = "roberta"):
 
     url = NEWS_FEEDS[source]
 
-    # Pobranie RSS z cache — ten sam mechanizm co w stream_news
-    cached = get_from_cache(source)
-    if cached:
-        feed = cached
-    else:
-        try:
-            feed = fetch_feed(url)
-            set_to_cache(source, feed)
-        except FeedFetchError as e:
-            print(f"⚠️  Feed niedostępny [{source}]: {e}")
-            return {"source": source, "articles": [], "error": str(e)}
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Błąd pobierania newsów: {str(e)}")
+    # Pobranie RSS — FeedFetchError (404/timeout) zwraca pustą listę zamiast HTTP 500
+    try:
+        feed = fetch_feed(url)
+    except FeedFetchError as e:
+        print(f"⚠️  Feed niedostępny [{source}]: {e}")
+        return {"source": source, "articles": [], "error": str(e)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Błąd pobierania newsów: {str(e)}")
 
     if not feed.entries:
         return {"source": source, "articles": []}
