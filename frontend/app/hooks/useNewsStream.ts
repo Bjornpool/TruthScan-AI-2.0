@@ -123,7 +123,11 @@ export function useNewsStream(source: string, lang: Lang = "pl", limit: number =
       es.removeEventListener("done", handleDone);
       es.close();
     };
-  }, [source, lang, limit]);
+  // lang celowo pominięty z deps — zmiana języka UI nie powinna restartować SSE.
+  // Wartość lang jest przechwytywana z closure przy pierwszym otwarciu połączenia
+  // (gdy source się zmienia). Klucz cache nie zawiera lang, więc cache działa poprawnie.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source, limit]);
 
   return state;
 }
