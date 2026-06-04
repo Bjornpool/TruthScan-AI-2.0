@@ -17,8 +17,9 @@ import csv
 import json
 import time
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from .nlp_service import get_adapter, ModelAdapter, analyze_news
 from .rss_utils import fetch_feed, clean_html, FeedFetchError
@@ -92,12 +93,26 @@ def _texts_from_feed(feed, limit: int) -> List[str]:
     return out
 
 
+def _fetch_source(source_name: str, quota: int) -> Tuple[object, List[str]]:
+    """Pobiera feed jednego źródła; zwraca (feed, texts) lub (None, []) przy błędzie."""
+    url = NEWS_FEEDS.get(source_name)
+    if not url:
+        return None, []
+    try:
+        feed = fetch_feed(url)
+        return feed, _texts_from_feed(feed, quota)
+    except Exception:
+        return None, []
+
+
 def fetch_rss_texts(langs: List[str], articles_per_lang: int = 8) -> Dict[str, List[str]]:
     """
     Pobiera artykuły RSS z równym podziałem na źródła.
 
     Algorytm (dla 2 źródeł i articles_per_lang=8):
       1. Pierwsza faza — każde źródło dostaje kwotę articles_per_lang // n_sources = 4.
+         Wszystkie źródła dla danego języka są odpytywane równolegle (ThreadPoolExecutor),
+         więc czas fazy 1 = max(czas_źródła) zamiast sum(czas_źródła).
       2. Druga faza — jeśli któreś źródło dostarczyło mniej niż kwota (np. ma tylko 2
          artykuły albo nie odpowiada), brakujące artykuły są dobierane z pozostałych
          źródeł (artykuły już wzięte są pomijane po stronie set używanych tekstów).
@@ -114,22 +129,13 @@ def fetch_rss_texts(langs: List[str], articles_per_lang: int = 8) -> Dict[str, L
         n = len(sources)
         quota = articles_per_lang // n if n else articles_per_lang
 
-        # Faza 1: pobierz quota artykułów z każdego źródła
-        buckets: List[List[str]] = []
-        feeds_cache: List[object] = []
-        for source_name in sources:
-            url = NEWS_FEEDS.get(source_name)
-            if not url:
-                buckets.append([])
-                feeds_cache.append(None)
-                continue
-            try:
-                feed = fetch_feed(url)
-                feeds_cache.append(feed)
-                buckets.append(_texts_from_feed(feed, quota))
-            except Exception:
-                buckets.append([])
-                feeds_cache.append(None)
+        # Faza 1: pobierz quota artykułów z każdego źródła — równolegle
+        with ThreadPoolExecutor(max_workers=max(n, 1)) as ex:
+            futures = [ex.submit(_fetch_source, src, quota) for src in sources]
+            pairs = [f.result() for f in futures]
+
+        feeds_cache = [feed for feed, _ in pairs]
+        buckets = [texts for _, texts in pairs]
 
         collected = [t for bucket in buckets for t in bucket]
 
