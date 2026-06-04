@@ -2,6 +2,7 @@
 Narzędzia pomocnicze do pobierania i przetwarzania kanałów RSS oraz cache w pamięci.
 """
 
+import calendar
 import time
 import requests
 import feedparser
@@ -12,6 +13,22 @@ from .config import CACHE_TTL_SECONDS
 
 # Prosty cache w pamięci (key -> (value, timestamp))
 _cache_data: Dict[str, tuple[Any, float]] = {}
+
+
+_MAX_ARTICLE_AGE_DAYS = 30
+
+
+def is_recent_entry(entry, max_age_days: int = _MAX_ARTICLE_AGE_DAYS) -> bool:
+    """
+    Zwraca True jeśli artykuł nie jest starszy niż max_age_days.
+    Artykuły bez pola published_parsed są przepuszczane (brak daty nie dyskwalifikuje).
+    published_parsed to time.struct_time UTC z feedparser — konwertowany przez calendar.timegm.
+    """
+    parsed = entry.get("published_parsed") if hasattr(entry, "get") else getattr(entry, "published_parsed", None)
+    if parsed is None:
+        return True
+    cutoff = time.time() - max_age_days * 86_400
+    return calendar.timegm(parsed) >= cutoff
 
 
 def clean_html(text: str) -> str:

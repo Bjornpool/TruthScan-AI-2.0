@@ -1,27 +1,10 @@
-# Dependencies
-node_modules/
-venv/
-
-# Python
+.env
 __pycache__/
 *.pyc
 *.pyo
-*.egg-info/
-
-# Environment
-.env
-
-# Data / generated files
 saved_articles.json
 benchmark_results/
-
-# Next.js build output
-.next/
-
-# Debug / test scripts
 debug_adapters.py
 truthscan_report.*
+truthscan_test.py
 setup_test_env.bat
-
-# Claude Code
-.claude/
