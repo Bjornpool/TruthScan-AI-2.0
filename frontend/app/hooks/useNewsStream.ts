@@ -123,7 +123,7 @@ export function useNewsStream(source: string, lang: Lang = "pl", limit: number =
       es.removeEventListener("done", handleDone);
       es.close();
     };
-  }, [source, lang, limit]);
+  }, [source, limit]);
 
   return state;
 }
