@@ -124,51 +124,67 @@ class TruthScanComparativeTester:
 #### Test 1: Pobieranie artykułów
         test_name = f"GET /news/{source}"
         start = time.time()
-        try:
-            response = requests.get(f"{self.base_url}/news/{source}", timeout=30)
+        response = None
+        last_exc = None
+        for attempt in range(2):
+            try:
+                response = requests.get(f"{self.base_url}/news/{source}", timeout=30)
+                last_exc = None
+                break
+            except requests.exceptions.Timeout as e:
+                last_exc = e
+                if attempt == 0:
+                    print(f"  ⏱️ Timeout (próba 1/2), retry za 5s...")
+                    time.sleep(5)
+            except Exception as e:
+                self.log_test(test_name, "FAIL", f"Błąd: {str(e)}", time.time() - start)
+                test_results["errors"].append(str(e))
+                return test_results
+
+        if last_exc is not None:
             duration = time.time() - start
-            test_results["performance"] = duration
+            self.log_test(test_name, "FAIL", f"Timeout po 2 próbach: {str(last_exc)}", duration)
+            test_results["errors"].append(str(last_exc))
+            return test_results
 
-            if response.status_code != 200:
-                self.log_test(test_name, "FAIL", f"Status code: {response.status_code}", duration)
-                test_results["errors"].append(f"HTTP {response.status_code}")
-                return test_results
+        duration = time.time() - start
+        test_results["performance"] = duration
 
-            data = response.json()
-            if not data:
-                self.log_test(test_name, "FAIL", "Brak danych w odpowiedzi", duration)
-                return test_results
+        if response.status_code != 200:
+            self.log_test(test_name, "FAIL", f"Status code: {response.status_code}", duration)
+            test_results["errors"].append(f"HTTP {response.status_code}")
+            return test_results
 
-            if isinstance(data, dict) and "articles" in data:
-                articles = data["articles"]
-                source_from_response = data.get("source", source)
-                test_results["articles"] = articles
+        data = response.json()
+        if not data:
+            self.log_test(test_name, "FAIL", "Brak danych w odpowiedzi", duration)
+            return test_results
 
-                details = f"Pobrano {len(articles)} artykułów | Źródło: {source_from_response}"
+        if isinstance(data, dict) and "articles" in data:
+            articles = data["articles"]
+            source_from_response = data.get("source", source)
+            test_results["articles"] = articles
 
-                if len(articles) > 0:
-                    first_article = articles[0]
-                    available_fields = [f for f in ["title", "sentiment", "fake_probability", "summary", "link", "published"]
-                                        if f in first_article]
-                    details += f" | Pola: {', '.join(available_fields)}"
-                    title = first_article.get("title", "Brak tytułu")
-                    if len(title) > 50:
-                        title = title[:50] + "..."
-                    details += f" | Przykład: '{title}'"
-                    for article in articles[:3]:
-                        t = article.get("title", "")
-                        if t:
-                            test_results["sample_titles"].append(t[:80])
+            details = f"Pobrano {len(articles)} artykułów | Źródło: {source_from_response}"
 
-                self.log_test(test_name, "PASS", details, duration)
-                self.performance_data.append({"endpoint": test_name, "duration": duration, "source": source})
-            else:
-                self.log_test(test_name, "WARNING", f"Nieoczekiwany format danych: {type(data)}", duration)
-                return test_results
+            if len(articles) > 0:
+                first_article = articles[0]
+                available_fields = [f for f in ["title", "sentiment", "fake_probability", "summary", "link", "published"]
+                                    if f in first_article]
+                details += f" | Pola: {', '.join(available_fields)}"
+                title = first_article.get("title", "Brak tytułu")
+                if len(title) > 50:
+                    title = title[:50] + "..."
+                details += f" | Przykład: '{title}'"
+                for article in articles[:3]:
+                    t = article.get("title", "")
+                    if t:
+                        test_results["sample_titles"].append(t[:80])
 
-        except Exception as e:
-            self.log_test(test_name, "FAIL", f"Błąd: {str(e)}", time.time() - start)
-            test_results["errors"].append(str(e))
+            self.log_test(test_name, "PASS", details, duration)
+            self.performance_data.append({"endpoint": test_name, "duration": duration, "source": source})
+        else:
+            self.log_test(test_name, "WARNING", f"Nieoczekiwany format danych: {type(data)}", duration)
             return test_results
 
 #### Test 2: Szczegółowa analiza NLP dla każdego artykułu
