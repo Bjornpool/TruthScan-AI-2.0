@@ -7,11 +7,9 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import SourceBlock from "../../../components/SourceBlock";
 import locales from "../../../lib/locales";
-import { fetchAllNews } from "../../../lib/fetchNews";
-import { useNewsCache, newsKey } from "../../../app/stores/newsCache";
 
 import type { Lang } from "../../../lib/types";
 
@@ -29,22 +27,6 @@ export default function SourceComparison({ language }: Props) {
 	const [compareSources, setCompareSources] = useState<string[]>([
 		...ALL_SOURCES,
 	]);
-
-	// Prefetch all uncached sources in parallel using REST (not SSE) to bypass
-	// the browser's 6-connection-per-domain limit that serialises SSE streams.
-	useEffect(() => {
-		const cacheState = useNewsCache.getState();
-		const missing = ALL_SOURCES.filter((src) => !cacheState.get(newsKey(src)));
-		if (missing.length === 0) return;
-
-		fetchAllNews([...missing], language, {
-			concurrency: missing.length,
-			onPartial: ({ source, articles }) => {
-				if (articles.length === 0) return;
-				useNewsCache.getState().set(newsKey(source), articles);
-			},
-		}).catch(() => {});
-	}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
 	const updateCompareSource = (idx: number, src: string) =>
 		setCompareSources((prev) => prev.map((s, i) => (i === idx ? src : s)));

@@ -1,3 +1,7 @@
+/**
+ * Hook obsługujący strumieniowe pobieranie newsów (SSE) dla wybranego źródła.
+ */
+
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -14,55 +18,43 @@ type StreamState = {
 };
 
 export function useNewsStream(source: string, lang: Lang = "pl", limit: number = 5): StreamState {
-  const cacheKey = newsKey(source);
-
-  // Reactive selector — re-renders only when this source's cache entry changes.
-  // This picks up data written by SourceComparison's parallel fetchAllNews prefetch.
-  const cachedArticles = useNewsCache((s) => {
-    const e = s.cache[cacheKey];
-    if (!e) return null;
-    return Date.now() - e.ts > s.ttlMs ? null : (e.data as Article[]);
-  });
-
-  const esRef = useRef<EventSource | null>(null);
-  // Local SSE state — used only while streaming (before cache is populated)
-  const [sseArticles, setSseArticles] = useState<Article[]>([]);
-  const [sseState, setSseState] = useState({
-    loading: cachedArticles === null,
-    error: null as string | null,
+  const [state, setState] = useState<StreamState>({
+    articles: [],
+    loading: true,
+    error: null,
     progress: 0,
     total: 0,
   });
 
-  // When cache is populated externally (by SourceComparison's fetchAllNews),
-  // close any running SSE stream and switch to cached data immediately.
-  useEffect(() => {
-    if (cachedArticles !== null && esRef.current) {
-      esRef.current.close();
-      esRef.current = null;
-      setSseArticles([]);
-      setSseState({
-        loading: false,
-        error: null,
-        progress: cachedArticles.length,
-        total: cachedArticles.length,
-      });
-    }
-  }, [cachedArticles]);
+  const esRef = useRef<EventSource | null>(null);
+  const cache = useNewsCache();
 
   useEffect(() => {
     if (!source) return;
 
-    // Cache hit — skip SSE entirely
-    const cached = useNewsCache.getState().get<Article[]>(cacheKey);
+    // Klucz cache bez lang — etykiety tłumaczone przez useSentiment po stronie UI
+    const cacheKey = newsKey(source);
+    const cached = cache.get<Article[]>(cacheKey);
+
+    // Jeżeli dane są w cache, pomijamy połączenie SSE
     if (cached && cached.length > 0) {
-      setSseArticles([]);
-      setSseState((s) => ({ ...s, loading: false, progress: cached.length, total: cached.length }));
+      setState({
+        articles: cached,
+        loading: false,
+        error: null,
+        progress: cached.length,
+        total: cached.length,
+      });
       return;
     }
 
-    setSseArticles([]);
-    setSseState({ loading: true, error: null, progress: 0, total: 0 });
+    setState({
+      articles: [],
+      loading: true,
+      error: null,
+      progress: 0,
+      total: 0,
+    });
 
     const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
     const es = new EventSource(`${apiBase}/stream-news/${encodeURIComponent(source)}?lang=${lang}`);
@@ -73,41 +65,49 @@ export function useNewsStream(source: string, lang: Lang = "pl", limit: number =
     const handleMeta = (e: MessageEvent) => {
       try {
         const { total } = JSON.parse(e.data);
-        setSseState((s) => ({ ...s, total: Math.min(total ?? 0, limit) }));
-      } catch {}
+        setState((s) => ({ ...s, total: Math.min(total ?? 0, limit) }));
+      } catch {
+      }
     };
 
     const handleBackendError = (e: MessageEvent) => {
       const msg = (() => {
-        try { return JSON.parse(e.data)?.message || "Backend error"; }
-        catch { return "Backend error"; }
+        try {
+          return JSON.parse(e.data)?.message || "Backend error";
+        } catch {
+          return "Backend error";
+        }
       })();
-      setSseState((s) => ({ ...s, loading: false, error: msg }));
+      setState((s) => ({ ...s, loading: false, error: msg }));
     };
 
     const handleMessage = (ev: MessageEvent) => {
       try {
         const article = JSON.parse(ev.data) as Article;
         collected.push(article);
-        const next = collected.slice(0, limit);
-        setSseArticles(next);
-        setSseState((s) => ({
-          ...s,
-          progress: Math.min(next.length, s.total || limit),
-        }));
-      } catch {}
+        setState((s) => {
+          const next = [...s.articles, article].slice(0, limit);
+          return {
+            ...s,
+            articles: next,
+            progress: Math.min(next.length, s.total || limit),
+          };
+        });
+      } catch {
+      }
     };
 
     const handleDone = () => {
-      setSseState((s) => ({ ...s, loading: false }));
+      setState((s) => ({ ...s, loading: false }));
+      // Zapis pełnego wyniku do cache po zakończeniu strumienia
       if (collected.length > 0) {
-        useNewsCache.getState().set(cacheKey, collected);
+        cache.set(cacheKey, collected); // zapisane bez lang w kluczu
       }
       es.close();
     };
 
     const handleError = () => {
-      setSseState((s) => ({ ...s, loading: false, error: "Stream error" }));
+      setState((s) => ({ ...s, loading: false, error: "Stream error" }));
       es.close();
     };
 
@@ -125,14 +125,5 @@ export function useNewsStream(source: string, lang: Lang = "pl", limit: number =
     };
   }, [source, lang, limit]);
 
-  // Prefer reactive Zustand cache over local SSE progress buffer
-  const articles = (cachedArticles ?? sseArticles).slice(0, limit);
-
-  return {
-    articles,
-    loading: cachedArticles !== null ? false : sseState.loading,
-    error: sseState.error,
-    progress: cachedArticles !== null ? articles.length : sseState.progress,
-    total: cachedArticles !== null ? articles.length : sseState.total,
-  };
+  return state;
 }
