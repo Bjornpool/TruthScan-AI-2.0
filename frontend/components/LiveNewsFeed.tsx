@@ -11,7 +11,7 @@
 
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { useNewsStream } from "../app/hooks/useNewsStream";
@@ -61,24 +61,14 @@ const TEXT_CONTENT = {
 
 export default function LiveNewsFeed({ source, language }: LiveNewsFeedProps) {
   const {
-    articles: rawArticles,
+    articles,
     loading,
     error,
     progress = 0,
     total = 0,
   } = useNewsStream(source, language, 5);
 
-  const [localArticles, setLocalArticles] = useState<Article[]>([]);
   const t = TEXT_CONTENT[language];
-
-  useEffect(() => {
-    setLocalArticles([]);
-  }, [source]);
-
-  useEffect(() => {
-    const next = (rawArticles ?? []) as Article[];
-    setLocalArticles(next);
-  }, [rawArticles]);
 
   const handleSave = async (article: Article) => {
     try {
@@ -122,7 +112,7 @@ export default function LiveNewsFeed({ source, language }: LiveNewsFeedProps) {
       </p>
 
       <AnimatePresence>
-        {localArticles.map((a, i) => (
+        {articles.map((a, i) => (
           <motion.div
             key={`${a.title}-${a.published ?? i}`}
             initial={{ opacity: 0, y: 24 }}
