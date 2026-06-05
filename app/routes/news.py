@@ -11,7 +11,7 @@ from fastapi.responses import StreamingResponse
 from fastapi_cache.decorator import cache
 
 from ..config import CACHE_TTL, NEWS_FEEDS
-from ..rss_utils import fetch_feed, clean_html, get_from_cache, set_to_cache, FeedFetchError
+from ..rss_utils import fetch_feed, clean_html, get_from_cache, set_to_cache, FeedFetchError, is_recent_entry
 from ..nlp_service import analyze_news, set_active_adapter
 
 router = APIRouter()
@@ -46,8 +46,8 @@ def get_news(source: str, lang: str = "pl", model: str = "roberta"):
     MAX_ARTICLES = 3
     articles: List[dict] = []
 
-    # Przetwarzanie i analiza artykułów
-    for entry in feed.entries[:MAX_ARTICLES]:
+    # Przetwarzanie i analiza artykułów — tylko artykuły z ostatnich 30 dni
+    for entry in [e for e in feed.entries if is_recent_entry(e)][:MAX_ARTICLES]:
         summary = clean_html(entry.get("summary", "Brak opisu"))
         text_to_analyze = (summary or "").strip() or entry.get("title", "")
         analysis = analyze_news(text_to_analyze, lang)
@@ -98,7 +98,7 @@ async def stream_news(source: str, lang: str = "pl", model: str = "roberta"):
 
         entries = feed.entries or []
         MAX_ARTICLES = 3
-        to_send = entries[:MAX_ARTICLES]
+        to_send = [e for e in entries if is_recent_entry(e)][:MAX_ARTICLES]
 
         # Metadane dla klienta
         yield f"event: meta\ndata: {json.dumps({'total': len(to_send)})}\n\n"

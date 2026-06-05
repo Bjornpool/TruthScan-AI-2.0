@@ -12,7 +12,7 @@ Zwraca:
 """
 
 import time
-from typing import Any, Dict, List, Optional
+from typing import List
 
 import anthropic
 from fastapi import APIRouter, HTTPException
@@ -236,7 +236,7 @@ BENCHMARK_COMMENT_PROMPT = {
 
 
 class BenchmarkCommentRequest(BaseModel):
-    results: List[Dict[str, Any]]
+    results: list
     lang: str = "pl"
 
 
@@ -293,7 +293,7 @@ class CompareRequest(BaseModel):
 class AdapterResult(BaseModel):
     adapter: str
     sentiment: str
-    sentiment_score: Optional[float]
+    sentiment_score: float
     inference_time_ms: float
 
 
@@ -309,11 +309,11 @@ def _sentiment_only_with_timing(adapter_name: str, text: str, lang: str) -> Adap
     neutral = SENTIMENT_MAP["neutral"].get(lang, "Neutral")
 
     if not text or len(text.strip()) < 10:
-        print(f"[DEBUG] {adapter_name}: tekst za krótki, zwracam neutral/None")
+        print(f"[DEBUG] {adapter_name}: tekst za krótki, zwracam neutral/0.0")
         return AdapterResult(
             adapter=adapter_name,
             sentiment=neutral,
-            sentiment_score=None,
+            sentiment_score=0.0,
             inference_time_ms=0.0,
         )
 
@@ -326,7 +326,7 @@ def _sentiment_only_with_timing(adapter_name: str, text: str, lang: str) -> Adap
         return AdapterResult(
             adapter=adapter_name,
             sentiment=neutral,
-            sentiment_score=None,
+            sentiment_score=0.0,
             inference_time_ms=round(elapsed, 1),
         )
     elapsed_ms = (time.perf_counter() - start) * 1000
@@ -339,7 +339,7 @@ def _sentiment_only_with_timing(adapter_name: str, text: str, lang: str) -> Adap
     print(f"[DEBUG] {adapter_name}: raw_label={raw_label!r}  raw_score={raw_score!r}  type(score)={type(raw_score)}")
 
     sentiment_translated = SENTIMENT_MAP.get(raw_label, {}).get(lang, neutral)
-    score_float = round(float(raw_score), 4) if raw_score is not None else None
+    score_float = round(float(raw_score) if raw_score is not None else 0.0, 4)
 
     print(f"[DEBUG] {adapter_name}: → sentiment={sentiment_translated!r}  score_float={score_float}  time={elapsed_ms:.1f}ms")
 
@@ -369,7 +369,7 @@ def _build_prompt(
     header_str = "\n".join(header_parts)
 
     rows = "\n".join(
-        f"  {ADAPTER_DESCRIPTIONS[r.adapter]}: {r.sentiment} (pewność: {f'{r.sentiment_score * 100:.0f}%' if r.sentiment_score is not None else 'n/d'}, czas: {r.inference_time_ms:.0f} ms)"
+        f"  {ADAPTER_DESCRIPTIONS[r.adapter]}: {r.sentiment} (pewność: {r.sentiment_score * 100:.0f}%, czas: {r.inference_time_ms:.0f} ms)"
         for r in results
     )
 
