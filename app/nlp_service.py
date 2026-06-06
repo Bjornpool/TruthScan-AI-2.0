@@ -10,6 +10,7 @@ współdzielonej przez wszystkie adaptery — model ładowany jest leniwie
 przy pierwszym wywołaniu get_shared_bart().
 """
 
+import sys
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
 from concurrent.futures import ThreadPoolExecutor
@@ -235,10 +236,12 @@ class XLMRoBERTaAdapter(ModelAdapter):
     def analyze_sentiment(self, text: str) -> Dict[str, Any]:
         self._load()
         if not self._logged:
-            print(f"[DEBUG XLM-RoBERTa] PRZED pipeline, text[:60]={text[:60]!r}", flush=True)
+            sys.stderr.write(f"[DEBUG XLM-RoBERTa] PRZED pipeline, text[:60]={text[:60]!r}\n")
+            sys.stderr.flush()
         raw = self._sentiment_pipe(text)
         if not self._logged:
-            print(f"[DEBUG XLM-RoBERTa] RAW OUTPUT: {raw}", flush=True)
+            sys.stderr.write(f"[DEBUG XLM-RoBERTa] RAW OUTPUT: {raw}\n")
+            sys.stderr.flush()
             self._logged = True
         result = _extract_pipeline_result(self.name, raw)
         return {
@@ -280,10 +283,12 @@ class HerBERTAdapter(ModelAdapter):
     def analyze_sentiment(self, text: str) -> Dict[str, Any]:
         self._load()
         if not self._logged:
-            print(f"[DEBUG HerBERT] PRZED pipeline, text[:60]={text[:60]!r}", flush=True)
+            sys.stderr.write(f"[DEBUG HerBERT] PRZED pipeline, text[:60]={text[:60]!r}\n")
+            sys.stderr.flush()
         raw = self._sentiment_pipe(text)
         if not self._logged:
-            print(f"[DEBUG HerBERT] RAW OUTPUT: {raw}", flush=True)
+            sys.stderr.write(f"[DEBUG HerBERT] RAW OUTPUT: {raw}\n")
+            sys.stderr.flush()
             self._logged = True
         result = _extract_pipeline_result(self.name, raw)
         return {
