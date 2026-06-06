@@ -214,6 +214,7 @@ class XLMRoBERTaAdapter(ModelAdapter):
 
     def __init__(self) -> None:
         self._sentiment_pipe = None
+        self._logged = False
 
     def _load(self) -> None:
         if self._sentiment_pipe is None:
@@ -234,6 +235,9 @@ class XLMRoBERTaAdapter(ModelAdapter):
     def analyze_sentiment(self, text: str) -> Dict[str, Any]:
         self._load()
         raw = self._sentiment_pipe(text)
+        if not self._logged:
+            print(f"[DEBUG XLM-RoBERTa] RAW OUTPUT: {raw}", flush=True)
+            self._logged = True
         result = _extract_pipeline_result(self.name, raw)
         return {
             "label": _normalize_sentiment_label(result.get("label", "")),
@@ -253,6 +257,7 @@ class HerBERTAdapter(ModelAdapter):
     def __init__(self, sentiment_model: Optional[str] = None) -> None:
         self._sentiment_model_id = sentiment_model or self.SENTIMENT_MODEL
         self._sentiment_pipe = None
+        self._logged = False
 
     def _load(self) -> None:
         if self._sentiment_pipe is None:
@@ -273,6 +278,9 @@ class HerBERTAdapter(ModelAdapter):
     def analyze_sentiment(self, text: str) -> Dict[str, Any]:
         self._load()
         raw = self._sentiment_pipe(text)
+        if not self._logged:
+            print(f"[DEBUG HerBERT] RAW OUTPUT: {raw}", flush=True)
+            self._logged = True
         result = _extract_pipeline_result(self.name, raw)
         return {
             "label": _normalize_sentiment_label(result.get("label", "")),
