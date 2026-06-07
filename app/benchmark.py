@@ -244,6 +244,11 @@ def run_benchmark(
                 try:
                     per_text.append(_run_single(adapter, text, lang))
                 except Exception as exc:
+                    sys.stderr.write(
+                        f"[BENCH ERROR] adapter={adapter_name}, lang={lang}, "
+                        f"error={type(exc).__name__}: {exc}\n"
+                    )
+                    sys.stderr.flush()
                     per_text.append({
                         "sentiment": None,
                         "fake_probability": None,

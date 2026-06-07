@@ -409,7 +409,12 @@ def analyze_news(
 
     try:
         sentiment_result = _adapter.analyze_sentiment(text)
-    except Exception:
+    except Exception as _sent_exc:
+        sys.stderr.write(
+            f"[NLP ERROR] {_adapter.name}.analyze_sentiment raised "
+            f"{type(_sent_exc).__name__}: {_sent_exc}\n"
+        )
+        sys.stderr.flush()
         sentiment_result = {"label": "neutral", "score": 0.0}
 
     label = sentiment_result.get("label", "neutral")
