@@ -10,7 +10,6 @@ współdzielonej przez wszystkie adaptery — model ładowany jest leniwie
 przy pierwszym wywołaniu get_shared_bart().
 """
 
-import sys
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
 from concurrent.futures import ThreadPoolExecutor
@@ -215,7 +214,6 @@ class XLMRoBERTaAdapter(ModelAdapter):
 
     def __init__(self) -> None:
         self._sentiment_pipe = None
-        self._logged = False
 
     def _load(self) -> None:
         if self._sentiment_pipe is None:
@@ -235,14 +233,7 @@ class XLMRoBERTaAdapter(ModelAdapter):
 
     def analyze_sentiment(self, text: str) -> Dict[str, Any]:
         self._load()
-        if not self._logged:
-            sys.stderr.write(f"[DEBUG XLM-RoBERTa] PRZED pipeline, text[:60]={text[:60]!r}\n")
-            sys.stderr.flush()
         raw = self._sentiment_pipe(text)
-        if not self._logged:
-            sys.stderr.write(f"[DEBUG XLM-RoBERTa] RAW OUTPUT: {raw}\n")
-            sys.stderr.flush()
-            self._logged = True
         result = _extract_pipeline_result(self.name, raw)
         return {
             "label": _normalize_sentiment_label(result.get("label", "")),
@@ -253,7 +244,7 @@ class XLMRoBERTaAdapter(ModelAdapter):
 class HerBERTAdapter(ModelAdapter):
     """
     Adapter dla języka polskiego (HerBERT).
-      sentyment: Voicelab/herbert-large-cased-sentiment (fine-tuned na polskim sentymencie)
+      sentyment: Voicelab/herbert-base-cased-sentiment (fine-tuned na polskim sentymencie)
       fake news: współdzielony BART
     """
 
@@ -262,7 +253,6 @@ class HerBERTAdapter(ModelAdapter):
     def __init__(self, sentiment_model: Optional[str] = None) -> None:
         self._sentiment_model_id = sentiment_model or self.SENTIMENT_MODEL
         self._sentiment_pipe = None
-        self._logged = False
 
     def _load(self) -> None:
         if self._sentiment_pipe is None:
@@ -282,14 +272,7 @@ class HerBERTAdapter(ModelAdapter):
 
     def analyze_sentiment(self, text: str) -> Dict[str, Any]:
         self._load()
-        if not self._logged:
-            sys.stderr.write(f"[DEBUG HerBERT] PRZED pipeline, text[:60]={text[:60]!r}\n")
-            sys.stderr.flush()
         raw = self._sentiment_pipe(text)
-        if not self._logged:
-            sys.stderr.write(f"[DEBUG HerBERT] RAW OUTPUT: {raw}\n")
-            sys.stderr.flush()
-            self._logged = True
         result = _extract_pipeline_result(self.name, raw)
         return {
             "label": _normalize_sentiment_label(result.get("label", "")),
@@ -409,12 +392,7 @@ def analyze_news(
 
     try:
         sentiment_result = _adapter.analyze_sentiment(text)
-    except Exception as _sent_exc:
-        sys.stderr.write(
-            f"[NLP ERROR] {_adapter.name}.analyze_sentiment raised "
-            f"{type(_sent_exc).__name__}: {_sent_exc}\n"
-        )
-        sys.stderr.flush()
+    except Exception:
         sentiment_result = {"label": "neutral", "score": 0.0}
 
     label = sentiment_result.get("label", "neutral")

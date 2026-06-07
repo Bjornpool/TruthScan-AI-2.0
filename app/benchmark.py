@@ -15,7 +15,6 @@ Użycie z API:
 
 import csv
 import json
-import sys
 import time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
@@ -207,17 +206,10 @@ def run_benchmark(
 
     results: List[BenchmarkResult] = []
 
-    sys.stderr.write(f"[BENCH] adapter_names={adapter_names}\n")
-    sys.stderr.flush()
-
     for adapter_name in adapter_names:
         try:
             adapter = get_adapter(adapter_name)
-            sys.stderr.write(f"[BENCH] adapter={adapter_name}, instance={type(adapter).__name__}\n")
-            sys.stderr.flush()
         except ValueError as exc:
-            sys.stderr.write(f"[BENCH] adapter={adapter_name}, ERROR={exc}\n")
-            sys.stderr.flush()
             results.append({
                 "adapter_name": adapter_name,
                 "error": str(exc),
@@ -244,11 +236,6 @@ def run_benchmark(
                 try:
                     per_text.append(_run_single(adapter, text, lang))
                 except Exception as exc:
-                    sys.stderr.write(
-                        f"[BENCH ERROR] adapter={adapter_name}, lang={lang}, "
-                        f"error={type(exc).__name__}: {exc}\n"
-                    )
-                    sys.stderr.flush()
                     per_text.append({
                         "sentiment": None,
                         "fake_probability": None,
