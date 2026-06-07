@@ -257,7 +257,7 @@ class HerBERTAdapter(ModelAdapter):
       fake news: współdzielony BART
     """
 
-    SENTIMENT_MODEL: str = "Voicelab/herbert-large-cased-sentiment"
+    SENTIMENT_MODEL: str = "Voicelab/herbert-base-cased-sentiment"
 
     def __init__(self, sentiment_model: Optional[str] = None) -> None:
         self._sentiment_model_id = sentiment_model or self.SENTIMENT_MODEL
