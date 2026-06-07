@@ -320,6 +320,48 @@ class TruthScanComparativeTester:
         self.comparison_data = comparison
         return comparison
 
+    def export_sources_csv(self, filename: str = "truthscan_sources.csv"):
+        """
+        Dopisuje wyniki NYTimes i PolsatNews do CSV (mode='a').
+        Każdy run dodaje 2 wiersze — po jednym na źródło.
+        """
+        fieldnames = [
+            "timestamp", "source", "article_count",
+            "avg_fake_probability", "response_time_s",
+            "sentiment_distribution", "article_titles",
+        ]
+
+        file_exists = os.path.isfile(filename)
+        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        rows = []
+        for source_key, data, label in [
+            ("NYTimes",    self.nytimes_results, "NYTimes"),
+            ("PolsatNews", self.polsat_results,  "PolsatNews"),
+        ]:
+            fake_scores = data.get("fake_scores", [])
+            avg_fake = round(statistics.mean(fake_scores), 2) if fake_scores else ""
+            sentiment_dist = dict(data.get("sentiment_distribution", {}))
+            titles = " | ".join(data.get("sample_titles", []))
+            rows.append({
+                "timestamp":              ts,
+                "source":                 label,
+                "article_count":          len(data.get("articles", [])),
+                "avg_fake_probability":   avg_fake,
+                "response_time_s":        round(data.get("performance", 0), 3),
+                "sentiment_distribution": json.dumps(sentiment_dist, ensure_ascii=False),
+                "article_titles":         titles,
+            })
+
+        with open(filename, "a", newline="", encoding="utf-8-sig") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter=";")
+            if not file_exists:
+                writer.writeheader()
+            writer.writerows(rows)
+
+        print(f"\n📊 Dane źródeł dopisane do: {filename} ({len(rows)} wiersze, ts={ts})")
+        return filename
+
 ####################
 # Test benchmarku modeli NLP — cold start + warm run
 ####################
@@ -1176,6 +1218,7 @@ REKOMENDACJE:
         if self.nytimes_results.get("articles") and self.polsat_results.get("articles"):
             print("\n5️⃣ Porównywanie wyników NYTimes i Gazety Prawnej...")
             self.compare_sources(self.nytimes_results, self.polsat_results)
+            self.export_sources_csv()
         else:
             print("⚠️ Brak danych do porównania")
 
@@ -1214,6 +1257,7 @@ REKOMENDACJE:
         print(f"   HTML: {html_report}")
         print(f"   Tekst: {text_report}")
         print(f"   CSV benchmarku: truthscan_benchmark.csv")
+        print(f"   CSV źródeł:    truthscan_sources.csv")
         print(f"{'='*70}")
 
         return passed > total * 0.7
