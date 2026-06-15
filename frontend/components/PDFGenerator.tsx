@@ -1,79 +1,73 @@
 /**
- * Komponent odpowiedzialny za generowanie i eksport widoku do pliku PDF.
+ * Komponent odpowiedzialny za generowanie i eksport artykułu do pliku PDF.
  *
  * Odpowiada za:
- * - opakowanie przekazanej treści w strukturę raportu,
- * - integrację z mechanizmem eksportu PDF po stronie klienta,
+ * - opakowanie podglądu treści raportu,
+ * - wywołanie mechanizmu eksportu (window.open + window.print) z inline CSS,
  * - obsługę akcji rozpoczęcia i zakończenia eksportu.
  */
 
-import React, { useRef } from 'react';
-import { usePDFExport } from '../app/hooks/usePDFExport';
+import React from 'react';
+import { usePDFExport, ArticlePrintData } from '../app/hooks/usePDFExport';
 
 interface PDFGeneratorProps {
   children: React.ReactNode;
   title?: string;
-  fileName?: string;
   showButton?: boolean;
   buttonText?: string;
   buttonClass?: string;
   onExportStart?: () => void;
   onExportEnd?: () => void;
+  articleData?: ArticlePrintData;
 }
 
 const PDFGenerator: React.FC<PDFGeneratorProps> = ({
   children,
-  title = 'ThruScan_Analysis',
-  fileName = 'ThruScan_Analysis',
+  title = 'TruthScan_Analysis',
   showButton = true,
   buttonText = 'Eksportuj do PDF',
   buttonClass = 'bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600',
   onExportStart,
-  onExportEnd
+  onExportEnd,
+  articleData,
 }) => {
-  const contentRef = useRef<HTMLDivElement>(null);
-  const handleExportPDF = usePDFExport(contentRef, { title });
+  const printArticle = usePDFExport();
 
-  const handlePrint = async () => {
+  const handlePrint = () => {
+    if (!articleData) return;
     onExportStart?.();
-    try {
-      await handleExportPDF();
-    } finally {
-      onExportEnd?.();
-    }
+    printArticle(articleData, title);
+    onExportEnd?.();
   };
 
   return (
     <div className="pdf-generator">
       {showButton && (
-        <div className="pdf-generator-controls no-print mb-4">
+        <div className="no-print mb-4">
           <button
             onClick={handlePrint}
+            disabled={!articleData}
             className={buttonClass}
-            title={`Export ${fileName} as PDF`}
           >
             {buttonText}
           </button>
         </div>
       )}
-      
-      <div 
-        ref={contentRef} 
-        className="pdf-content bg-white p-6 rounded-lg shadow-sm"
-      >
-        <header className="pdf-header mb-6 border-b pb-4">
+
+      <div className="pdf-content bg-white p-6 rounded-lg shadow-sm">
+        <header className="mb-6 border-b pb-4">
           <h1 className="text-2xl font-bold text-gray-800">{title}</h1>
           <div className="text-sm text-gray-500">
             Wygenerowano: {new Date().toLocaleDateString('pl-PL')}
           </div>
         </header>
-        
+
         <div className="pdf-body">
           {children}
         </div>
-        
-        <footer className="pdf-footer mt-8 pt-4 border-t text-sm text-gray-500 text-center">
-          ThruScan AI Report • Strona 1
+
+        <footer className="mt-8 pt-4 border-t text-sm text-gray-500 text-center">
+          TruthScan AI Report
         </footer>
       </div>
     </div>

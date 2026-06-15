@@ -1,160 +1,166 @@
 /**
- * Hook umożliwiający eksport wybranego fragmentu interfejsu do PDF (druk przeglądarki).
+ * Hook generujący raport PDF artykułu przez window.open + window.print().
+ * Buduje samodzielny dokument HTML z inline CSS — nie klonuje DOM z Tailwindem.
  */
 
 import { useCallback } from 'react';
+import type { Lang } from '../../lib/types';
 
-interface PDFOptions {
-  title?: string;
-  margins?: string;
+export interface ArticlePrintData {
+  title: string;
+  source: string;
+  published?: string;
+  sentimentLabel: string;
+  fakeProbability?: number;
+  content: string;
+  link?: string;
+  language: Lang;
 }
 
-export const usePDFExport = (
-  componentRef: React.RefObject<HTMLDivElement | null>,
-  options: PDFOptions = {}
-) => {
-  const {
-    title = 'ThruScan_Analysis',
-    margins = '15mm'
-  } = options;
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 
-  const handlePrint = useCallback((): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      if (!componentRef.current) {
-        reject(new Error('Component reference is not available'));
-        return;
-      }
+function buildPrintHTML(data: ArticlePrintData, docTitle: string): string {
+  const { title, source, published, sentimentLabel, fakeProbability, content, link, language } = data;
 
-      const printWindow = window.open('', '_blank');
+  const T = (pl: string, no: string, en: string) =>
+    language === 'pl' ? pl : language === 'no' ? no : en;
 
-      // Fallback: jeśli okno nie może zostać otwarte (blokada popupów),
-      // zapisujemy zawartość jako statyczny plik HTML
-      if (!printWindow) {
-        const content = componentRef.current.innerHTML;
-        const blob = new Blob([`
-          <!DOCTYPE html>
-          <html lang="pl">
-          <head>
-            <meta charset="UTF-8">
-            <title>${title}</title>
-            <style>
-              body { font-family: Arial, sans-serif; margin: 20px; }
-            </style>
-          </head>
-          <body>${content}</body>
-          </html>
-        `], { type: 'text/html' });
-        
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${title}.html`;
-        link.click();
-        URL.revokeObjectURL(url);
-        resolve();
-        return;
-      }
+  const dateStr = new Date().toLocaleDateString(
+    language === 'pl' ? 'pl-PL' : language === 'no' ? 'nb-NO' : 'en-US',
+    { year: 'numeric', month: 'long', day: 'numeric' }
+  );
 
-      try {
-        const content = componentRef.current.cloneNode(true) as HTMLDivElement;
+  const fakeStr =
+    typeof fakeProbability === 'number'
+      ? fakeProbability.toFixed(2) + '%'
+      : T('Brak danych', 'Ingen data', 'No data');
 
-        // Usunięcie elementów interaktywnych z eksportowanego widoku
-        const interactiveElements = content.querySelectorAll('button, input, select, textarea, .pdf-generator-controls');
-        interactiveElements.forEach(el => el.remove());
+  const contentParagraphs = content
+    .split('\n')
+    .filter(p => p.trim())
+    .map(p => `<p style="margin-bottom:16px;">${escapeHtml(p)}</p>`)
+    .join('');
 
-        const style = `
-          <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-            
-            @page {
-              margin: ${margins};
-              size: A4;
-            }
-            
-            body {
-              margin: 0;
-              padding: 0;
-              font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-              color: #000;
-              background: white;
-              line-height: 1.4;
-            }
-            
-            * {
-              -webkit-print-color-adjust: exact !important;
-              color-adjust: exact !important;
-            }
-            
-            .pdf-content {
-              margin: 0 !important;
-              padding: 0 !important;
-              box-shadow: none !important;
-              border: none !important;
-            }
-            
-            table { 
-              width: 100%; 
-              border-collapse: collapse; 
-              margin: 10px 0;
-            }
-            
-            th, td { 
-              border: 1px solid #ddd; 
-              padding: 8px; 
-              text-align: left; 
-            }
-            
-            th { 
-              background-color: #f5f5f5 !important; 
-            }
-          </style>
-        `;
+  const linkSection = link
+    ? `<div style="margin-top:35px;">
+        <div style="font-size:18px;font-weight:bold;color:#0066cc;margin-bottom:15px;padding-bottom:8px;border-bottom:2px solid #e9ecef;">
+          🔗 ${T('Link do oryginalnego artykułu', 'Originallenke', 'Original Article Link')}
+        </div>
+        <a href="${escapeHtml(link)}" style="color:#0066cc;word-break:break-all;font-size:14px;">${escapeHtml(link)}</a>
+      </div>`
+    : '';
 
-        printWindow.document.write(`
-          <!DOCTYPE html>
-          <html lang="pl">
-            <head>
-              <title>${title}</title>
-              <meta charset="UTF-8">
-              <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-              ${style}
-            </head>
-            <body>
-              ${content.innerHTML}
-            </body>
-          </html>
-        `);
-        
-        printWindow.document.close();
+  return `<!DOCTYPE html>
+<html lang="${language}">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>${escapeHtml(docTitle)}</title>
+  <style>
+    @page {
+      margin: 15mm;
+      size: A4;
+    }
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #333;
+      background: white;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    * {
+      -webkit-print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
+    @media print {
+      body { padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div style="max-width:800px;margin:0 auto;">
 
-        setTimeout(() => {
-          printWindow.focus();
-          printWindow.print();
+    <div style="border-bottom:3px solid #0066cc;padding-bottom:25px;margin-bottom:30px;">
+      <div style="font-size:28px;font-weight:bold;color:#0066cc;margin-bottom:10px;text-align:center;">
+        TruthScan AI
+      </div>
+      <div style="font-size:22px;font-weight:bold;color:#333;line-height:1.4;text-align:center;">
+        ${escapeHtml(title)}
+      </div>
+    </div>
 
-          const checkPrint = setInterval(() => {
-            if (printWindow.closed) {
-              clearInterval(checkPrint);
-              resolve();
-            }
-          }, 100);
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin:25px 0;padding:20px;background:#f8f9fa;border-radius:8px;border-left:4px solid #0066cc;">
+      <div style="font-size:14px;color:#555;">
+        <span style="font-weight:bold;color:#333;display:inline-block;min-width:100px;">📅 ${T('Data', 'Dato', 'Date')}:</span>
+        ${escapeHtml(published || T('Brak daty', 'Ingen dato', 'No date'))}
+      </div>
+      <div style="font-size:14px;color:#555;">
+        <span style="font-weight:bold;color:#333;display:inline-block;min-width:100px;">📰 ${T('Źródło', 'Kilde', 'Source')}:</span>
+        ${escapeHtml(source || '-')}
+      </div>
+      <div style="font-size:14px;color:#555;">
+        <span style="font-weight:bold;color:#333;display:inline-block;min-width:100px;">💬 ${T('Sentyment', 'Sentiment', 'Sentiment')}:</span>
+        ${escapeHtml(sentimentLabel)}
+      </div>
+      <div style="font-size:14px;color:#555;">
+        <span style="font-weight:bold;color:#333;display:inline-block;min-width:100px;">❓ Fake News:</span>
+        ${escapeHtml(fakeStr)}
+      </div>
+    </div>
 
-          setTimeout(() => {
-            if (!printWindow.closed) {
-              printWindow.close();
-              resolve();
-            }
-          }, 10000);
-          
-        }, 1000);
-        
-      } catch (error) {
-        printWindow?.close();
-        reject(error);
-      }
-    });
-  }, [componentRef, title, margins]);
+    <div style="margin-top:35px;">
+      <div style="font-size:18px;font-weight:bold;color:#0066cc;margin-bottom:15px;padding-bottom:8px;border-bottom:2px solid #e9ecef;">
+        📝 ${T('TREŚĆ ARTYKUŁU', 'ARTIKKELINNHOLD', 'ARTICLE CONTENT')}
+      </div>
+      <div style="font-size:15px;line-height:1.7;text-align:justify;color:#333;">
+        ${contentParagraphs || `<p>${T('Brak dostępnej treści artykułu.', 'Ingen artikkeltekst tilgjengelig.', 'No article content available.')}</p>`}
+      </div>
+    </div>
 
-  return handlePrint;
+    ${linkSection}
+
+    <div style="margin-top:60px;font-size:12px;color:#666;text-align:center;padding-top:20px;border-top:1px solid #ddd;">
+      ${T('Wygenerowano przez TruthScan Analysis', 'Generert av TruthScan Analysis', 'Generated by TruthScan Analysis')} • ${dateStr}
+    </div>
+
+  </div>
+</body>
+</html>`;
+}
+
+export const usePDFExport = () => {
+  const printArticle = useCallback((data: ArticlePrintData, docTitle: string): void => {
+    const html = buildPrintHTML(data, docTitle);
+    const printWindow = window.open('', '_blank');
+
+    if (!printWindow) {
+      // Fallback gdy popup zablokowany — plik HTML z pełnymi stylami inline
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${docTitle.replace(/[^a-zA-Z0-9ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/gi, '_')}.html`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+
+    setTimeout(() => {
+      printWindow.focus();
+      printWindow.print();
+    }, 500);
+  }, []);
+
+  return printArticle;
 };
