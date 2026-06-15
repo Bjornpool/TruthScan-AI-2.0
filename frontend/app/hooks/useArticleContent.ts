@@ -1,9 +1,10 @@
 /**
- * Hook odpowiedzialny za pobieranie pełnej treści artykułów
- * przez własny endpoint serwerowy /api/fetch-article-content.
+ * Hook pobierający pełną treść artykułu przez endpoint FastAPI /fetch-article-content.
  */
 
 import { useCallback } from 'react';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
 
 export const useArticleContent = () => {
   const fetchFullContent = useCallback(async (url: string): Promise<string> => {
@@ -11,8 +12,8 @@ export const useArticleContent = () => {
 
     try {
       const response = await fetch(
-        `/api/fetch-article-content?url=${encodeURIComponent(url)}`,
-        { signal: AbortSignal.timeout(15000) }
+        `${API_BASE}/fetch-article-content?url=${encodeURIComponent(url)}`,
+        { signal: AbortSignal.timeout(20000) }
       );
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`);

@@ -7,7 +7,7 @@ from fastapi.responses import Response
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.inmemory import InMemoryBackend
 
-from .routes import misc, news, saved, compare
+from .routes import misc, news, saved, compare, content
 
 app = FastAPI()
 
@@ -43,6 +43,7 @@ app.include_router(misc.router)
 app.include_router(news.router)
 app.include_router(saved.router)
 app.include_router(compare.router)
+app.include_router(content.router)
 
 
 @app.get("/")
