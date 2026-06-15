@@ -4,7 +4,6 @@ Endpoint pobierający pełną treść artykułu ze strony zewnętrznej.
 
 import re
 
-import httpx
 from bs4 import BeautifulSoup
 from fastapi import APIRouter, HTTPException, Query
 
@@ -80,6 +79,7 @@ async def fetch_article_content(url: str = Query(..., description="URL artykułu
         raise HTTPException(status_code=400, detail="Nieprawidłowy URL")
 
     try:
+        import httpx
         async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
             response = await client.get(url, headers=_HEADERS)
             response.raise_for_status()
