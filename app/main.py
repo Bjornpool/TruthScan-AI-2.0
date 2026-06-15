@@ -13,7 +13,7 @@ app = FastAPI()
 
 _CORS_HEADERS = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS, HEAD",
     "Access-Control-Allow-Headers": "*",
     "Access-Control-Max-Age": "86400",
 }
