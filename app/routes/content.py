@@ -30,48 +30,69 @@ _CONTENT_SELECTORS = [
     "main",
 ]
 
-
-# Wzorce szumu na końcu artykułu — po napotkaniu zatrzymujemy ekstrakcję
-_NOISE_PATTERNS = re.compile(
-    r"(Czytaj wi[eę]cej"
-    r"|WIDZISZ CO[SŚ] WA[ZŻ]NEGO"
-    r"|Chcesz by[cć] na bie[zż][aą]co"
-    r"|Dost[eę]pne w Google Play"
-    r"|Pobierz z App Store)",
+# Norweskie wzorce szumu — filtruj linie zawierające
+_NO_NOISE = re.compile(
+    r"kl\.\s*\d{1,2}:\d{2}"        # timestampy: kl. 14:32
+    r"|–\s*Journalist\s+(i|fra)\b"  # byline: – Journalist i NRK
+    r"|Foto\s*:"                     # podpis zdjęcia
+    r"|^Kilde:"                      # źródło
+    r"|Publiseringsdato:",
     re.IGNORECASE,
 )
 
-# Linia złożona wyłącznie z wielkich liter i spacji (tagi tematyczne)
-_ALL_CAPS_LINE = re.compile(r"^[A-ZŁŚŻŹĆŃÓĄĘ\s]{4,}$")
+# Polskie wzorce szumu — filtruj linie zawierające
+_PL_NOISE = re.compile(
+    r"Czytaj wi[eę]cej"
+    r"|WIDZISZ CO[SŚ] WA[ZŻ]NEGO"
+    r"|Chcesz by[cć] na bie[zż][aą]co"
+    r"|Pobierz z (App Store|Google Play|HUAWEI)"
+    r"|PRZEJD[ZŹ] DO WRZUTNI",
+    re.IGNORECASE,
+)
+
+# Linia złożona z samych wielkich liter, krótsza niż 30 znaków (tagi tematyczne)
+_ALL_CAPS_SHORT = re.compile(r"^[A-ZŁŚŻŹĆŃÓĄĘ\s\-]{4,29}$")
 
 
-def _cut_at_noise(lines: list[str]) -> list[str]:
-    """Zatrzymuje ekstrakcję przy pierwszym wzorcu szumu lub linii tagów."""
+def _is_noise_line(line: str) -> bool:
+    s = line.strip()
+    if not s:
+        return False
+    if _NO_NOISE.search(s):
+        return True
+    if _PL_NOISE.search(s):
+        return True
+    if _ALL_CAPS_SHORT.match(s):
+        return True
+    return False
+
+
+def _deduplicate(lines: list) -> list:
+    seen: set = set()
     result = []
     for line in lines:
-        stripped = line.strip()
-        if _NOISE_PATTERNS.search(stripped):
-            break
-        if stripped and _ALL_CAPS_LINE.match(stripped):
-            break
+        key = line.strip()
+        if key in seen:
+            continue
+        seen.add(key)
         result.append(line)
     return result
 
 
-def _join_broken_lines(lines: list[str]) -> list[str]:
-    """Łączy linie które nie kończą się kropką, przecinkiem ani cudzysłowem."""
-    result: list[str] = []
+def _join_broken_lines(lines: list) -> list:
+    """Łączy linie nie kończące się interpunkcją, gdy następna zaczyna się małą literą."""
+    result = []
     i = 0
     while i < len(lines):
         line = lines[i].rstrip()
-        # Jeśli linia nie kończy się znakiem kończącym i jest następna — złącz
+        next_line = lines[i + 1].strip() if i + 1 < len(lines) else ""
         if (
             line
-            and not re.search(r'[.,;"»")\]]\s*$', line)
-            and i + 1 < len(lines)
-            and lines[i + 1].strip()
+            and not re.search(r'[.,;:!?"»”)\]]\s*$', line)
+            and next_line
+            and next_line[0].islower()
         ):
-            result.append(line + " " + lines[i + 1].strip())
+            result.append(line + " " + next_line)
             i += 2
         else:
             result.append(line)
@@ -79,12 +100,12 @@ def _join_broken_lines(lines: list[str]) -> list[str]:
     return result
 
 
-def _remove_isolated_short(lines: list[str]) -> list[str]:
+def _remove_isolated_short(lines: list) -> list:
     """Usuwa linie krótsze niż 20 znaków otoczone pustymi liniami."""
     result = []
     for idx, line in enumerate(lines):
         stripped = line.strip()
-        if len(stripped) < 20 and stripped:
+        if stripped and len(stripped) < 20:
             prev_empty = idx == 0 or not lines[idx - 1].strip()
             next_empty = idx == len(lines) - 1 or not lines[idx + 1].strip()
             if prev_empty and next_empty:
@@ -96,12 +117,10 @@ def _remove_isolated_short(lines: list[str]) -> list[str]:
 def extract_article_content(html: str) -> str:
     soup = BeautifulSoup(html, "html.parser")
 
-    # Usuń elementy nienależące do treści
     for tag in soup(["script", "style", "nav", "header", "footer", "aside",
                      "form", "button", "figure", "iframe"]):
         tag.decompose()
 
-    # Szukaj głównego kontenera treści
     content_el = None
     for selector in _CONTENT_SELECTORS:
         el = soup.select_one(selector)
@@ -112,7 +131,6 @@ def extract_article_content(html: str) -> str:
     if content_el:
         text = content_el.get_text(separator="\n")
     else:
-        # Fallback: zbierz akapity dłuższe niż 60 znaków
         paragraphs = [
             p.get_text(strip=True)
             for p in soup.find_all("p")
@@ -120,7 +138,6 @@ def extract_article_content(html: str) -> str:
         ]
         text = "\n\n".join(paragraphs[:30])
 
-    # Oczyść encje HTML
     text = (
         text
         .replace("&amp;", "&")
@@ -133,7 +150,8 @@ def extract_article_content(html: str) -> str:
     text = re.sub(r" {2,}", " ", text)
 
     lines = text.split("\n")
-    lines = _cut_at_noise(lines)
+    lines = _deduplicate(lines)
+    lines = [ln for ln in lines if not _is_noise_line(ln)]
     lines = _join_broken_lines(lines)
     lines = _remove_isolated_short(lines)
 
