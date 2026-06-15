@@ -79,24 +79,35 @@ def _deduplicate(lines: list) -> list:
     return result
 
 
+# Znaki kończące sekcję — linia z takim zakończeniem zamyka akapit
+# nawet bez pustej linii (wykrzyknik, pytajnik, cudzysłów zamykający)
+_SECTION_END = re.compile(r'[!?]\s*$|[“”»\']\s*[.!?]?\s*$')
+
+
 def _join_broken_lines(lines: list) -> list:
-    """Łączy linie nie kończące się interpunkcją, gdy następna zaczyna się małą literą."""
+    “””Grupuje kolejne niepuste linie w akapity.
+    Nowy akapit zaczyna się przy pustej linii lub znaku kończącego sekcję.”””
     result = []
-    i = 0
-    while i < len(lines):
-        line = lines[i].rstrip()
-        next_line = lines[i + 1].strip() if i + 1 < len(lines) else ""
-        if (
-            line
-            and not re.search(r'[.,;:!?"»”)\]]\s*$', line)
-            and next_line
-            and next_line[0].islower()
-        ):
-            result.append(line + " " + next_line)
-            i += 2
+    current: list = []
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            # Pusta linia — zamknij bieżący akapit
+            if current:
+                result.append(“ “.join(current))
+                current = []
+            result.append(“”)
         else:
-            result.append(line)
-            i += 1
+            current.append(stripped)
+            # Linia kończy sekcję — zamknij akapit bez czekania na pustą linię
+            if _SECTION_END.search(stripped):
+                result.append(“ “.join(current))
+                current = []
+
+    if current:
+        result.append(“ “.join(current))
+
     return result
 
 
