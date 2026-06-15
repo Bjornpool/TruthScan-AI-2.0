@@ -31,6 +31,68 @@ _CONTENT_SELECTORS = [
 ]
 
 
+# Wzorce szumu na końcu artykułu — po napotkaniu zatrzymujemy ekstrakcję
+_NOISE_PATTERNS = re.compile(
+    r"(Czytaj wi[eę]cej"
+    r"|WIDZISZ CO[SŚ] WA[ZŻ]NEGO"
+    r"|Chcesz by[cć] na bie[zż][aą]co"
+    r"|Dost[eę]pne w Google Play"
+    r"|Pobierz z App Store)",
+    re.IGNORECASE,
+)
+
+# Linia złożona wyłącznie z wielkich liter i spacji (tagi tematyczne)
+_ALL_CAPS_LINE = re.compile(r"^[A-ZŁŚŻŹĆŃÓĄĘ\s]{4,}$")
+
+
+def _cut_at_noise(lines: list[str]) -> list[str]:
+    """Zatrzymuje ekstrakcję przy pierwszym wzorcu szumu lub linii tagów."""
+    result = []
+    for line in lines:
+        stripped = line.strip()
+        if _NOISE_PATTERNS.search(stripped):
+            break
+        if stripped and _ALL_CAPS_LINE.match(stripped):
+            break
+        result.append(line)
+    return result
+
+
+def _join_broken_lines(lines: list[str]) -> list[str]:
+    """Łączy linie które nie kończą się kropką, przecinkiem ani cudzysłowem."""
+    result: list[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i].rstrip()
+        # Jeśli linia nie kończy się znakiem kończącym i jest następna — złącz
+        if (
+            line
+            and not re.search(r'[.,;"»")\]]\s*$', line)
+            and i + 1 < len(lines)
+            and lines[i + 1].strip()
+        ):
+            result.append(line + " " + lines[i + 1].strip())
+            i += 2
+        else:
+            result.append(line)
+            i += 1
+    return result
+
+
+def _remove_isolated_short(lines: list[str]) -> list[str]:
+    """Usuwa linie krótsze niż 20 znaków otoczone pustymi liniami."""
+    result = []
+    for idx, line in enumerate(lines):
+        stripped = line.strip()
+        if len(stripped) < 20 and stripped:
+            prev_empty = idx == 0 or not lines[idx - 1].strip()
+            next_empty = idx == len(lines) - 1 or not lines[idx + 1].strip()
+            if prev_empty and next_empty:
+                continue
+        result.append(line)
+    return result
+
+
 def extract_article_content(html: str) -> str:
     soup = BeautifulSoup(html, "html.parser")
 
@@ -58,7 +120,7 @@ def extract_article_content(html: str) -> str:
         ]
         text = "\n\n".join(paragraphs[:30])
 
-    # Oczyść encje i wielokrotne spacje
+    # Oczyść encje HTML
     text = (
         text
         .replace("&amp;", "&")
@@ -69,6 +131,13 @@ def extract_article_content(html: str) -> str:
         .replace("&nbsp;", " ")
     )
     text = re.sub(r" {2,}", " ", text)
+
+    lines = text.split("\n")
+    lines = _cut_at_noise(lines)
+    lines = _join_broken_lines(lines)
+    lines = _remove_isolated_short(lines)
+
+    text = "\n".join(lines)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
 
