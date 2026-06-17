@@ -128,7 +128,7 @@ def ai_chart_comment(request: ChartCommentRequest):
     try:
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
         message = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-4-6",
             max_tokens=300,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -196,7 +196,7 @@ def ai_emotion_comment(request: EmotionCommentRequest):
     try:
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
         message = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-4-6",
             max_tokens=300,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -272,7 +272,7 @@ def ai_benchmark_comment(request: BenchmarkCommentRequest):
     try:
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
         message = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-4-6",
             max_tokens=400,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -431,7 +431,7 @@ def compare_models(request: CompareRequest):
             client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
             prompt = _build_prompt(request, results, shared_fake_probability)
             message = client.messages.create(
-                model="claude-sonnet-4-20250514",
+                model="claude-sonnet-4-6",
                 max_tokens=800,
                 messages=[{"role": "user", "content": prompt}],
             )
