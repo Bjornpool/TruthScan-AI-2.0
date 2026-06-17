@@ -1,5 +1,5 @@
 """
-Endpoint pobierający pełną treść artykułu ze strony zewnętrznej.
+Endpoint pobierajacy pelna tresc artykulu ze strony zewnetrznej.
 """
 
 import re
@@ -30,17 +30,17 @@ _CONTENT_SELECTORS = [
     "main",
 ]
 
-# Norweskie wzorce szumu — filtruj linie zawierające
+# Norweskie wzorce szumu
 _NO_NOISE = re.compile(
-    r"kl\.\s*\d{1,2}:\d{2}"        # timestampy: kl. 14:32
-    r"|–\s*Journalist\s+(i|fra)\b"  # byline: – Journalist i NRK
-    r"|Foto\s*:"                     # podpis zdjęcia
-    r"|^Kilde:"                      # źródło
+    r"kl\.\s*\d{1,2}:\d{2}"
+    r"|[–-]\s*Journalist\s+(i|fra)\b"
+    r"|Foto\s*:"
+    r"|^Kilde:"
     r"|Publiseringsdato:",
     re.IGNORECASE,
 )
 
-# Polskie wzorce szumu — filtruj linie zawierające
+# Polskie wzorce szumu
 _PL_NOISE = re.compile(
     r"Czytaj wi[eę]cej"
     r"|WIDZISZ CO[SŚ] WA[ZŻ]NEGO"
@@ -50,8 +50,21 @@ _PL_NOISE = re.compile(
     re.IGNORECASE,
 )
 
-# Linia złożona z samych wielkich liter, krótsza niż 30 znaków (tagi tematyczne)
+# Linia z samych wielkich liter, krotsza niz 30 znakow (tagi tematyczne)
 _ALL_CAPS_SHORT = re.compile(r"^[A-ZŁŚŻŹĆŃÓĄĘ\s\-]{4,29}$")
+
+# Znaki konczace sekcje (wykrzyknik, pytajnik, cudzyslow zamykajacy).
+# Wszystkie znaki przez chr() — unikamy literalnych cudzyslowow w source.
+_CLOSING_QUOTES = (
+    chr(0x22)    # “  ASCII double quote
+    + chr(0x201C)  # left double quotation mark
+    + chr(0x201D)  # right double quotation mark
+    + chr(0xBB)    # right-pointing double angle quotation mark
+    + chr(0x27)    # ASCII single quote / apostrophe
+)
+_SECTION_END = re.compile(
+    r'[!?]\s*$|[' + _CLOSING_QUOTES + r']\s*[.!?]?\s*$'
+)
 
 
 def _is_noise_line(line: str) -> bool:
@@ -79,40 +92,33 @@ def _deduplicate(lines: list) -> list:
     return result
 
 
-# Znaki kończące sekcję — linia z takim zakończeniem zamyka akapit
-# nawet bez pustej linii (wykrzyknik, pytajnik, cudzysłów zamykający)
-_SECTION_END = re.compile(r'[!?]\s*$|[“”»\']\s*[.!?]?\s*$')
-
-
 def _join_broken_lines(lines: list) -> list:
-    “””Grupuje kolejne niepuste linie w akapity.
-    Nowy akapit zaczyna się przy pustej linii lub znaku kończącego sekcję.”””
+    # Grupuje kolejne niepuste linie w akapity.
+    # Nowy akapit zaczyna sie przy pustej linii lub znaku konczacego sekcje.
     result = []
-    current: list = []
+    current = []
 
     for line in lines:
         stripped = line.strip()
         if not stripped:
-            # Pusta linia — zamknij bieżący akapit
             if current:
-                result.append(“ “.join(current))
+                result.append(" ".join(current))
                 current = []
-            result.append(“”)
+            result.append("")
         else:
             current.append(stripped)
-            # Linia kończy sekcję — zamknij akapit bez czekania na pustą linię
             if _SECTION_END.search(stripped):
-                result.append(“ “.join(current))
+                result.append(" ".join(current))
                 current = []
 
     if current:
-        result.append(“ “.join(current))
+        result.append(" ".join(current))
 
     return result
 
 
 def _remove_isolated_short(lines: list) -> list:
-    """Usuwa linie krótsze niż 20 znaków otoczone pustymi liniami."""
+    # Usuwa linie krotsze niz 20 znakow otoczone pustymi liniami.
     result = []
     for idx, line in enumerate(lines):
         stripped = line.strip()
@@ -172,9 +178,9 @@ def extract_article_content(html: str) -> str:
 
 
 @router.get("/fetch-article-content")
-async def fetch_article_content(url: str = Query(..., description="URL artykułu do pobrania")):
+async def fetch_article_content(url: str = Query(..., description="URL artykulu do pobrania")):
     if not url.startswith("http"):
-        raise HTTPException(status_code=400, detail="Nieprawidłowy URL")
+        raise HTTPException(status_code=400, detail="Nieprawidlowy URL")
 
     try:
         import httpx
@@ -183,11 +189,11 @@ async def fetch_article_content(url: str = Query(..., description="URL artykułu
             response.raise_for_status()
             html = response.text
     except httpx.TimeoutException:
-        raise HTTPException(status_code=504, detail="Timeout podczas pobierania artykułu")
+        raise HTTPException(status_code=504, detail="Timeout podczas pobierania artykulu")
     except httpx.HTTPStatusError as e:
-        raise HTTPException(status_code=502, detail=f"Błąd HTTP: {e.response.status_code}")
+        raise HTTPException(status_code=502, detail=f"Blad HTTP: {e.response.status_code}")
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Błąd pobierania: {str(e)}")
+        raise HTTPException(status_code=502, detail=f"Blad pobierania: {str(e)}")
 
     content = extract_article_content(html)
     return {"content": content, "success": True, "contentLength": len(content)}
