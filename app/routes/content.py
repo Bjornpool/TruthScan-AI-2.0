@@ -50,6 +50,20 @@ _PL_NOISE = re.compile(
     re.IGNORECASE,
 )
 
+# Angielskie wzorce szumu (Al Jazeera, BBC, CNN i inne)
+_EN_NOISE = re.compile(
+    r"Save\s+Share\s+facebook"
+    r"|whatsapp-stroke\s+copylink"
+    r"|By\s+Al\s+Jazeera\s+Staff"
+    r"|Published\s+On\s+\d{1,2}"
+    r"|^Advertisement$"
+    r"|Recommended\s+Stories"
+    r"|list\s+of\s+\d+\s+items"
+    r"|list\s+\d+\s+of\s+\d+"
+    r"|^end\s+of\s+list$",
+    re.IGNORECASE,
+)
+
 # Linia z samych wielkich liter, krotsza niz 30 znakow (tagi tematyczne)
 _ALL_CAPS_SHORT = re.compile(r"^[A-ZŁŚŻŹĆŃÓĄĘ\s\-]{4,29}$")
 
@@ -74,6 +88,8 @@ def _is_noise_line(line: str) -> bool:
     if _NO_NOISE.search(s):
         return True
     if _PL_NOISE.search(s):
+        return True
+    if _EN_NOISE.search(s):
         return True
     if _ALL_CAPS_SHORT.match(s):
         return True
