@@ -4,7 +4,7 @@ Endpointy związane z pobieraniem, analizą i strumieniowaniem wiadomości.
 
 import asyncio
 import json
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
@@ -16,18 +16,36 @@ from ..nlp_service import analyze_news, set_active_adapter
 
 router = APIRouter()
 
+_PL_SOURCES = {"PolsatNews", "TVN24", "Bankier", "Money", "SpidersWeb"}
+_NO_SOURCES = {"NRK", "VG", "E24", "Aftenposten"}
+_EN_SOURCES = {"BBC", "CNN", "NYTimes", "Guardian", "AlJazeera"}
+
+
+def _resolve_model(source: str, lang: str, model: Optional[str]) -> str:
+    """Zwraca nazwę adaptera: respektuje ręczny wybór ?model=,
+    w przeciwnym razie dobiera model na podstawie źródła lub języka."""
+    if model:
+        return model
+    if source in _PL_SOURCES or lang == "pl":
+        return "herbert"
+    if source in _NO_SOURCES or lang == "no":
+        return "norbert"
+    return "roberta"
+
 
 @router.get("/news/{source}")
-def get_news(source: str, lang: str = "pl", model: str = "roberta"):
+def get_news(source: str, lang: str = "pl", model: Optional[str] = None):
     # Walidacja źródła
     if source not in NEWS_FEEDS:
         raise HTTPException(status_code=404, detail="Źródło nieobsługiwane")
 
+    resolved = _resolve_model(source, lang, model)
+
     # Ustawienie aktywnego adaptera NLP
     try:
-        set_active_adapter(model)
+        set_active_adapter(resolved)
     except ValueError:
-        raise HTTPException(status_code=400, detail=f"Nieznany model: {model}")
+        raise HTTPException(status_code=400, detail=f"Nieznany model: {resolved}")
 
     url = NEWS_FEEDS[source]
 
@@ -58,7 +76,7 @@ def get_news(source: str, lang: str = "pl", model: str = "roberta"):
             "summary": summary,
             "published": entry.get("published", "Brak daty"),
             "source": source,
-            "model": model,
+            "model": resolved,
             **analysis
         })
 
@@ -67,15 +85,17 @@ def get_news(source: str, lang: str = "pl", model: str = "roberta"):
 
 # Strumieniowanie newsów przez SSE
 @router.get("/stream-news/{source}")
-async def stream_news(source: str, lang: str = "pl", model: str = "roberta"):
+async def stream_news(source: str, lang: str = "pl", model: Optional[str] = None):
     if source not in NEWS_FEEDS:
         raise HTTPException(status_code=404, detail="Źródło nieobsługiwane")
 
+    resolved = _resolve_model(source, lang, model)
+
     # Walidacja i ustawienie adaptera przed uruchomieniem generatora
     try:
-        set_active_adapter(model)
+        set_active_adapter(resolved)
     except ValueError:
-        raise HTTPException(status_code=400, detail=f"Nieznany model: {model}")
+        raise HTTPException(status_code=400, detail=f"Nieznany model: {resolved}")
 
     async def event_generator():
         # Próba pobrania RSS z cache
@@ -120,7 +140,7 @@ async def stream_news(source: str, lang: str = "pl", model: str = "roberta"):
                 "summary": summary,
                 "published": entry.get("published", "Brak daty"),
                 "source": source,
-                "model": model,
+                "model": resolved,
                 **analysis,
             }
 
