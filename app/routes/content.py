@@ -76,7 +76,16 @@ _EN_NOISE = re.compile(
     r"|Recommended\s+Stories"
     r"|list\s+of\s+\d+\s+items"
     r"|list\s+\d+\s+of\s+\d+"
-    r"|^end\s+of\s+list$",
+    r"|^end\s+of\s+list$"
+    r"|^Facebook$",
+    re.IGNORECASE,
+)
+
+# Wzorce zatrzymujace ekstrakcje — wszystko po nich to szum nawigacyjny
+_STOP_PATTERNS = re.compile(
+    r"^[Źź]r[oó]d[lł]o\s*:"
+    r"|^Czytaj tak[zż]e\s*:"
+    r"|^Powi[aą]zane artyku[lł]y",
     re.IGNORECASE,
 )
 
@@ -122,6 +131,16 @@ def _deduplicate(lines: list) -> list:
         if key in seen:
             continue
         seen.add(key)
+        result.append(line)
+    return result
+
+
+def _cut_at_stop(lines: list) -> list:
+    # Zatrzymuje ekstrakcje przy pierwszym wzorcu stopu — reszta to szum nawigacyjny.
+    result = []
+    for line in lines:
+        if _STOP_PATTERNS.search(line.strip()):
+            break
         result.append(line)
     return result
 
@@ -201,6 +220,7 @@ def extract_article_content(html: str) -> str:
     text = re.sub(r" {2,}", " ", text)
 
     lines = text.split("\n")
+    lines = _cut_at_stop(lines)
     lines = _deduplicate(lines)
     lines = [ln for ln in lines if not _is_noise_line(ln)]
     lines = _join_broken_lines(lines)
