@@ -40,14 +40,30 @@ _NO_NOISE = re.compile(
     re.IGNORECASE,
 )
 
-# Polskie wzorce szumu
+# Polskie wzorce szumu (w tym TVN24)
 _PL_NOISE = re.compile(
     r"Czytaj wi[eę]cej"
     r"|WIDZISZ CO[SŚ] WA[ZŻ]NEGO"
     r"|Chcesz by[cć] na bie[zż][aą]co"
     r"|Pobierz z (App Store|Google Play|HUAWEI)"
-    r"|PRZEJD[ZŹ] DO WRZUTNI",
+    r"|PRZEJD[ZŹ] DO WRZUTNI"
+    r"|Wykup subskrypcj[eę]"
+    r"|Masz subskrypcj[eę]"
+    r"|Dowiedz si[eę] wi[eę]cej"
+    r"|ZOBACZ TAKE|ZOBACZ TAK[ZŻ]E"
+    r"|TVN24\+?\s*Originals"
+    r"|Udost[eę]pnij\s*:"
+    r"|Link skopiowany do schowka"
+    r"|^Tagi\s*:",
     re.IGNORECASE,
+)
+
+# Wzorzec autora: "Imię Nazwisko" lub "Imię Nazwisko 45 min"
+_AUTHOR_LINE = re.compile(
+    r"^[A-ZŁŚŻŹĆŃÓĄĘ][a-złśżźćńóąę]{1,20}"
+    r"(\s+[A-ZŁŚŻŹĆŃÓĄĘ][a-złśżźćńóąę]{1,20})?"
+    r"\s+[A-ZŁŚŻŹĆŃÓĄĘ][a-złśżźćńóąę]{1,30}"
+    r"(\s+\d{1,3}\s+min)?\s*$"
 )
 
 # Angielskie wzorce szumu (Al Jazeera, BBC, CNN i inne)
@@ -92,6 +108,8 @@ def _is_noise_line(line: str) -> bool:
     if _EN_NOISE.search(s):
         return True
     if _ALL_CAPS_SHORT.match(s):
+        return True
+    if _AUTHOR_LINE.match(s):
         return True
     return False
 
