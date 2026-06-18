@@ -81,11 +81,30 @@ _EN_NOISE = re.compile(
     re.IGNORECASE,
 )
 
-# Wzorce zatrzymujace ekstrakcje — wszystko po nich to szum nawigacyjny
+# Wzorce zatrzymujace ekstrakcje (PL/NO/EN) — wszystko po nich to szum nawigacyjny
 _STOP_PATTERNS = re.compile(
+    # Polski
     r"^[Źź]r[oó]d[lł]o\s*:"
     r"|^Czytaj tak[zż]e\s*:"
-    r"|^Powi[aą]zane artyku[lł]y",
+    r"|^Czytaj wi[eę]cej\s*:"
+    r"|^Powi[aą]zane artyku[lł]y"
+    r"|^Polecane artyku[lł]y"
+    # Norweski
+    r"|^Les ogs[aå]\s*:"
+    r"|^Les mer\s*:"
+    r"|^Relaterte saker"
+    r"|^Annonse$"
+    r"|^Del denne saken"
+    r"|^Kilde\s*:"
+    # Angielski
+    r"|^Read more\s*:"
+    r"|^Related articles"
+    r"|^Related stories"
+    r"|^More from\b"
+    r"|^Also read\b"
+    r"|^Source\s*:"
+    r"|^Topics\s*:"
+    r"|^Tags\s*:",
     re.IGNORECASE,
 )
 
