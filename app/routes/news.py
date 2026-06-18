@@ -23,12 +23,20 @@ _EN_SOURCES = {"BBC", "CNN", "NYTimes", "Guardian", "AlJazeera"}
 
 def _resolve_model(source: str, lang: str, model: Optional[str]) -> str:
     """Zwraca nazwę adaptera: respektuje ręczny wybór ?model=,
-    w przeciwnym razie dobiera model na podstawie źródła lub języka."""
+    następnie dopasowuje po źródle (pewne), a lang używa tylko jako fallback
+    dla nieznanych źródeł (lang to język UI, nie artykułu)."""
     if model:
         return model
-    if source in _PL_SOURCES or lang == "pl":
+    if source in _PL_SOURCES:
         return "herbert"
-    if source in _NO_SOURCES or lang == "no":
+    if source in _NO_SOURCES:
+        return "norbert"
+    if source in _EN_SOURCES:
+        return "roberta"
+    # Nieznane źródło — fallback na język UI
+    if lang == "pl":
+        return "herbert"
+    if lang == "no":
         return "norbert"
     return "roberta"
 
