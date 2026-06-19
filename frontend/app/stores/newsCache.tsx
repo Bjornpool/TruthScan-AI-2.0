@@ -84,9 +84,22 @@ export const useNewsCache = create<NewsCacheState>((set, get) => ({
   },
 }));
 
-// helper: klucz cache dla /news — lang celowo pominięty, bo etykiety
-// sentymentu są tłumaczone po stronie frontendu przez useSentiment.
-// Zmiana języka UI nie powinna wymuszać ponownego pobrania artykułów.
-export const newsKey = (source: string, model = "roberta") => `news:${source}:${model}`;
+// Mapowanie source → model NLP (lustrzane odbicie _resolve_model z backendu).
+// Używane do budowania klucza cache — gwarantuje spójność między useNewsStream
+// (zapis) a useDashboardCharts (odczyt) dla każdego źródła.
+const _PL_SOURCES = new Set(["PolsatNews", "TVN24", "Bankier", "Money", "SpidersWeb"]);
+const _NO_SOURCES = new Set(["NRK", "VG", "E24", "Aftenposten"]);
+
+export function resolveModel(source: string): string {
+  if (_PL_SOURCES.has(source)) return "herbert";
+  if (_NO_SOURCES.has(source)) return "norbert";
+  return "roberta";
+}
+
+// helper: klucz cache dla /news — model wywiedziony z source, nie hardcoded "roberta".
+// Dzięki temu news:PolsatNews:herbert i news:VG:norbert są niezależnymi wpisami.
+export const newsKey = (source: string, model?: string) =>
+  `news:${source}:${model ?? resolveModel(source)}`;
+
 // helper: klucz cache dla /emotion-stats
 export const statsKey = (source: string) => `stats:${source}`;
