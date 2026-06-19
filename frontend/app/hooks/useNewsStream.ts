@@ -57,7 +57,7 @@ export function useNewsStream(source: string, lang: Lang = "pl", limit: number =
     });
 
     const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-    const es = new EventSource(`${apiBase}/stream-news/${encodeURIComponent(source)}?lang=${lang}`);
+    const es = new EventSource(`${apiBase}/stream-news/${encodeURIComponent(source)}?lang=${lang}&t=${Date.now()}`);
     esRef.current = es;
 
     let collected: Article[] = [];
