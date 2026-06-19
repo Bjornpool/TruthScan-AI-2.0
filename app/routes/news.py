@@ -292,3 +292,47 @@ async def get_all_charts_data(lang: str = "pl"):
             all_data.update(result)
 
     return {"charts": all_data}
+
+
+# TYMCZASOWY ENDPOINT DEBUG — usunąć po weryfikacji
+@router.get("/debug-sentiments")
+def debug_sentiments():
+    """
+    Zwraca artykuły ze wszystkich źródeł z polem sentiment i model.
+    Dane z cache RSS (TTL 120s) lub pobrane na żywo jeśli cache pusty.
+    Posortowane po sentiment — łatwo sprawdzić rozkład.
+    """
+    results = []
+
+    for source in NEWS_FEEDS:
+        resolved = _resolve_model(source, "pl", None)
+        try:
+            set_active_adapter(resolved)
+        except ValueError:
+            continue
+
+        feed = get_from_cache(source)
+        if not feed:
+            try:
+                feed = fetch_feed(NEWS_FEEDS[source])
+                set_to_cache(source, feed)
+            except Exception:
+                continue
+
+        entries = [e for e in (feed.entries or []) if is_recent_entry(e)][:3]
+        for entry in entries:
+            summary = clean_html(entry.get("summary", ""))
+            text = (summary or "").strip() or entry.get("title", "")
+            try:
+                analysis = analyze_news(text, "pl")
+            except Exception:
+                continue
+            results.append({
+                "source": source,
+                "model": resolved,
+                "sentiment": analysis.get("sentiment", ""),
+                "title": entry.get("title", "")[:50],
+            })
+
+    results.sort(key=lambda x: x["sentiment"])
+    return {"count": len(results), "articles": results}
