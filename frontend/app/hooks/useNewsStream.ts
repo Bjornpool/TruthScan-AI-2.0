@@ -9,6 +9,12 @@ import type { Article } from "@/lib/fetchNews";
 import { useNewsCache, newsKey } from "../../app/stores/newsCache";
 import type { Lang } from "../../lib/types";
 
+const ALL_SOURCES = [
+  "BBC", "CNN", "NYTimes", "Guardian", "AlJazeera",
+  "Money", "PolsatNews", "TVN24", "SpidersWeb", "Bankier",
+  "NRK", "VG", "E24", "Aftenposten",
+];
+
 type StreamState = {
   articles: Article[];
   loading: boolean;
@@ -27,12 +33,19 @@ export function useNewsStream(source: string, lang: Lang = "pl", limit: number =
   });
 
   const esRef = useRef<EventSource | null>(null);
+  const prevLangRef = useRef<Lang | null>(null);
   const cache = useNewsCache();
 
   useEffect(() => {
     if (!source) return;
 
-    // Klucz cache bez lang — etykiety tłumaczone przez useSentiment po stronie UI
+    // Zmiana języka — artykuły w cache mają sentyment w starym języku UI,
+    // wymuś ponowne pobranie przez SSE z nowym lang
+    if (prevLangRef.current !== null && prevLangRef.current !== lang) {
+      ALL_SOURCES.forEach((src) => cache.del(newsKey(src)));
+    }
+    prevLangRef.current = lang;
+
     const cacheKey = newsKey(source);
     const cached = cache.get<Article[]>(cacheKey);
 
@@ -123,7 +136,7 @@ export function useNewsStream(source: string, lang: Lang = "pl", limit: number =
       es.removeEventListener("done", handleDone);
       es.close();
     };
-  }, [source, limit]);
+  }, [source, lang, limit]);
 
   return state;
 }
