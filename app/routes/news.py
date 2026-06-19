@@ -12,7 +12,7 @@ from fastapi_cache.decorator import cache
 
 from ..config import CACHE_TTL, NEWS_FEEDS
 from ..rss_utils import fetch_feed, clean_html, get_from_cache, set_to_cache, FeedFetchError, is_recent_entry
-from ..nlp_service import analyze_news, set_active_adapter
+from ..nlp_service import analyze_news, set_active_adapter, get_adapter
 
 router = APIRouter()
 
@@ -99,9 +99,10 @@ async def stream_news(source: str, lang: str = "pl", model: Optional[str] = None
 
     resolved = _resolve_model(source, lang, model)
 
-    # Walidacja i ustawienie adaptera przed uruchomieniem generatora
+    # Pobierz adapter przez get_adapter() — nie mutuje globalnego _active_adapter,
+    # więc współbieżne żądania do innych źródeł nie nadpiszą modelu tego strumienia
     try:
-        set_active_adapter(resolved)
+        adapter = get_adapter(resolved)
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Nieznany model: {resolved}")
 
@@ -136,10 +137,13 @@ async def stream_news(source: str, lang: str = "pl", model: Optional[str] = None
             summary = clean_html(entry.get("summary", "Brak opisu"))
             text_to_analyze = (summary or "").strip() or entry.get("title", "")
 
-            # Analiza NLP uruchamiana w executorze (CPU-bound)
+            # Analiza NLP uruchamiana w executorze (CPU-bound).
+            # Adapter i tekst przechwycone przez domyślne argumenty lambdy —
+            # izoluje od globalnego _active_adapter który może być zmieniony
+            # przez współbieżne żądanie w trakcie await.
             loop = asyncio.get_event_loop()
             analysis = await loop.run_in_executor(
-                None, lambda: analyze_news(text_to_analyze, lang)
+                None, lambda t=text_to_analyze, a=adapter: analyze_news(t, lang, a)
             )
 
             article = {
