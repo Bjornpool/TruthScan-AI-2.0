@@ -38,21 +38,11 @@ export function useDashboardCharts(_language: Lang) {
     const emosMap    = { POSITIVE: 0, NEGATIVE: 0, NEUTRAL: 0 };
     let loaded = 0;
 
-    console.group("[CHARTS] recomputeFromCache");
-
     for (const src of ALL_SOURCES) {
       const articles = cacheState.get<Article[]>(newsKey(src));
-      if (!articles || articles.length === 0) {
-        console.log(`  [${src}] — brak w cache`);
-        continue;
-      }
+      if (!articles || articles.length === 0) continue;
 
       loaded++;
-      const a0 = articles[0];
-      console.log(
-        `  [${src}] ${articles.length} art | key=${newsKey(src)}` +
-        ` | model=${a0?.model ?? "?"} | sentiment[0]=${a0?.sentiment ?? "?"}`
-      );
 
       const avgFake =
         articles.reduce((sum, a) => {
@@ -69,9 +59,6 @@ export function useDashboardCharts(_language: Lang) {
         }
       }
     }
-
-    console.log(`  SUMA: loaded=${loaded} | emosMap=`, emosMap);
-    console.groupEnd();
 
     setLoadedSources(loaded);
     if (barsMap.size === 0) return;
