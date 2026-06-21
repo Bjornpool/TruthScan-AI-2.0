@@ -46,11 +46,17 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const cacheState = useNewsCache.getState();
-    const missing = (ALL_SOURCES as readonly string[]).filter(
-      (src) => !cacheState.get(newsKey(src))
-    );
+    const { ttlMs } = cacheState;
+    const now = Date.now();
 
-    // Wszystkie źródła są już w cache (np. powrót w ciągu TTL 5 min)
+    // getRaw — brak efektów ubocznych; jawne porównanie ts zamiast polegania
+    // na get() który kasuje wpis przy odczycie (problem z race condition)
+    const missing = (ALL_SOURCES as readonly string[]).filter((src) => {
+      const entry = cacheState.getRaw(newsKey(src));
+      return !entry || now - entry.ts > ttlMs;
+    });
+
+    // Wszystkie źródła są świeże w cache (np. powrót w ciągu TTL 5 min)
     if (missing.length === 0) {
       setPrefetchDone(true);
       return;

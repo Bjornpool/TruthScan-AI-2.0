@@ -5,15 +5,16 @@
 
 import { create } from "zustand";
 
-type CacheEntry<T = any> = {
+export type CacheEntry<T = any> = {
   data: T;
-  ts: number;           
+  ts: number;
 };
 
 type NewsCacheState = {
   cache: Record<string, CacheEntry>;
   ttlMs: number;
   get: <T = any>(key: string) => T | null;
+  getRaw: (key: string) => CacheEntry | null;
   set: (key: string, data: any) => void;
   del: (key: string) => void;
   clear: () => void;
@@ -53,7 +54,6 @@ export const useNewsCache = create<NewsCacheState>((set, get) => ({
     const expired = Date.now() - entry.ts > ttlMs;
     // Automatyczne wygaszanie wpisów cache (TTL)
     if (expired) {
-      
       const next = { ...cache };
       delete next[key];
       set({ cache: next });
@@ -61,6 +61,13 @@ export const useNewsCache = create<NewsCacheState>((set, get) => ({
       return null;
     }
     return entry.data as T;
+  },
+
+  // Surowy dostęp do wpisu bez sprawdzania TTL i bez efektów ubocznych.
+  // Używany przez prefetch do jawnego porównania ts z Date.now().
+  getRaw: (key: string) => {
+    const { cache } = get();
+    return cache[key] ?? null;
   },
 
   set: (key: string, data: any) => {
