@@ -1,10 +1,18 @@
 /**
- * Hook obsługujący strumieniowe pobieranie newsów (SSE) dla wybranego źródła.
+ * Hook pobierający artykuły dla wybranego źródła.
+ *
+ * Kolejność:
+ *  1. Cache Zustand (newsKey(source)) → natychmiastowy zwrot, brak requestu
+ *  2. Cache MISS → HTTP GET /news/{source} (ten sam endpoint co prefetch)
+ *
+ * Używa tego samego endpointu co fetchOneSource() w prefetch (page.tsx)
+ * i useDashboardCharts (czyta z cache). Gwarantuje spójność danych
+ * między kartami artykułów a wykresem.
  */
 
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Article } from "@/lib/fetchNews";
 import { useNewsCache, newsKey } from "../../app/stores/newsCache";
 import type { Lang } from "../../lib/types";
@@ -26,17 +34,16 @@ export function useNewsStream(source: string, lang: Lang = "pl", limit: number =
     total: 0,
   });
 
-  const esRef = useRef<EventSource | null>(null);
   const cache = useNewsCache();
 
   useEffect(() => {
     if (!source) return;
 
-    // Klucz cache bez lang — model zależy od source, nie od języka UI
+    // Klucz cache — model wywiedziony z source, bez lang
     const cacheKey = newsKey(source);
     const cached = cache.get<Article[]>(cacheKey);
 
-    // Jeżeli dane są w cache, pomijamy połączenie SSE
+    // Cache HIT — zwróć dane z cache, bez requestu do backendu
     if (cached && cached.length > 0) {
       console.log(`[STREAM] ${source} key=${cacheKey} CACHE HIT ${cached.length} art. sentiments=[${cached.map((a) => a.sentiment).join(", ")}]`);
       setState({
@@ -49,82 +56,42 @@ export function useNewsStream(source: string, lang: Lang = "pl", limit: number =
       return;
     }
 
-    console.log(`[STREAM] ${source} key=${cacheKey} CACHE MISS — otwieranie SSE`);
+    // Cache MISS — HTTP GET /news/{source} (ten sam endpoint co prefetch)
+    console.log(`[STREAM] ${source} key=${cacheKey} CACHE MISS — HTTP GET /news/${source}`);
 
-    setState({
-      articles: [],
-      loading: true,
-      error: null,
-      progress: 0,
-      total: 0,
-    });
+    setState({ articles: [], loading: true, error: null, progress: 0, total: 0 });
 
     const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-    const es = new EventSource(`${apiBase}/stream-news/${encodeURIComponent(source)}?lang=${lang}&t=${Date.now()}`);
-    esRef.current = es;
+    let cancelled = false;
 
-    let collected: Article[] = [];
-
-    const handleMeta = (e: MessageEvent) => {
-      try {
-        const { total } = JSON.parse(e.data);
-        setState((s) => ({ ...s, total: Math.min(total ?? 0, limit) }));
-      } catch {
-      }
-    };
-
-    const handleBackendError = (e: MessageEvent) => {
-      const msg = (() => {
-        try {
-          return JSON.parse(e.data)?.message || "Backend error";
-        } catch {
-          return "Backend error";
+    fetch(`${apiBase}/news/${encodeURIComponent(source)}?lang=${lang}`)
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data) => {
+        if (cancelled) return;
+        const rawArticles: Article[] = Array.isArray(data?.articles) ? data.articles : [];
+        const articles = rawArticles.slice(0, limit);
+        if (articles.length > 0) {
+          cache.set(cacheKey, articles);
         }
-      })();
-      setState((s) => ({ ...s, loading: false, error: msg }));
-    };
-
-    const handleMessage = (ev: MessageEvent) => {
-      try {
-        const article = JSON.parse(ev.data) as Article;
-        collected.push(article);
-        setState((s) => {
-          const next = [...s.articles, article].slice(0, limit);
-          return {
-            ...s,
-            articles: next,
-            progress: Math.min(next.length, s.total || limit),
-          };
+        setState({
+          articles,
+          loading: false,
+          error: null,
+          progress: articles.length,
+          total: articles.length,
         });
-      } catch {
-      }
-    };
-
-    const handleDone = () => {
-      setState((s) => ({ ...s, loading: false }));
-      // Zapis pełnego wyniku do cache po zakończeniu strumienia
-      if (collected.length > 0) {
-        cache.set(cacheKey, collected); // zapisane bez lang w kluczu
-      }
-      es.close();
-    };
-
-    const handleError = () => {
-      setState((s) => ({ ...s, loading: false, error: "Stream error" }));
-      es.close();
-    };
-
-    es.addEventListener("meta", handleMeta);
-    es.addEventListener("backend_error", handleBackendError);
-    es.addEventListener("done", handleDone);
-    es.onmessage = handleMessage;
-    es.onerror = handleError;
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error(`[STREAM] ${source} błąd HTTP GET:`, err);
+        setState((s) => ({ ...s, loading: false, error: String(err) }));
+      });
 
     return () => {
-      es.removeEventListener("meta", handleMeta);
-      es.removeEventListener("backend_error", handleBackendError);
-      es.removeEventListener("done", handleDone);
-      es.close();
+      cancelled = true;
     };
   }, [source, limit]);
 
