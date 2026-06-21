@@ -1,17 +1,17 @@
 /**
- * Blok porównawczy pojedynczego źródła informacyjnego.
+ * Blok porównawczy pojedynczego źródła.
  *
- * Odpowiada za:
- * - prezentację wybranego źródła wiadomości,
- * - możliwość dynamicznej zmiany źródła w obrębie porównania,
- * - wyświetlenie podstawowych metryk (liczba artykułów, ryzyko fake news),
- * - osadzenie strumienia artykułów dla danego źródła.
+ * Czyta artykuły WYŁĄCZNIE z cache Zustand (ten sam klucz co wykres).
+ * Nigdy nie otwiera SSE — eliminuje rozbieżności między kartami a wykresem.
  */
 
 "use client";
 
 import SourceSelector from "./SourceSelector";
-import LiveNewsFeed from "./LiveNewsFeed";
+import ArticleCard from "./ArticleCard";
+import { saveArticle } from "../lib/savedArticles";
+import { useNewsCache, newsKey } from "../app/stores/newsCache";
+import type { Article } from "../lib/fetchNews";
 import type { Lang } from "../lib/types";
 
 export type SourceBlockProps = {
@@ -27,18 +27,15 @@ export type SourceBlockProps = {
 };
 
 const STATS_TEXT = {
-  pl: {
-    articles: "Artykułów:",
-    fakeRisk: 'Ryzyko "fake":',
-  },
-  en: {
-    articles: "Articles:",
-    fakeRisk: "Fake risk:",
-  },
-  no: {
-    articles: "Artikler:",
-    fakeRisk: "Falsk-risiko:",
-  },
+  pl: { articles: "Artykułów:", fakeRisk: 'Ryzyko "fake":' },
+  en: { articles: "Articles:",  fakeRisk: "Fake risk:" },
+  no: { articles: "Artikler:", fakeRisk: "Falsk-risiko:" },
+};
+
+const NO_DATA_TEXT = {
+  pl: "Brak artykułów w cache",
+  en: "No articles in cache",
+  no: "Ingen artikler i cache",
 };
 
 export default function SourceBlock({
@@ -51,6 +48,22 @@ export default function SourceBlock({
 }: SourceBlockProps) {
   const t = STATS_TEXT[language];
 
+  // Czyta z tego samego klucza co useDashboardCharts — gwarantuje spójność z wykresem
+  const articles = useNewsCache((state) => {
+    const key = newsKey(source);
+    const entry = state.cache[key];
+    if (!entry || Date.now() - entry.ts > state.ttlMs) return null;
+    return entry.data as Article[] | null;
+  });
+
+  const handleSave = async (article: Article) => {
+    try {
+      await saveArticle(article);
+    } catch (err: any) {
+      alert(`❌ Supabase error: ${err?.message ?? JSON.stringify(err)}`);
+    }
+  };
+
   return (
     <div
       className={`bg-gray-100 dark:bg-gray-800 rounded-lg shadow p-4 space-y-4 ${
@@ -58,12 +71,9 @@ export default function SourceBlock({
       }`}
     >
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <h3 className="font-bold text-lg md:text-xl tracking-wide text-gray-900 dark:text-gray-100">
-            {source}
-          </h3>
-        </div>
-
+        <h3 className="font-bold text-lg md:text-xl tracking-wide text-gray-900 dark:text-gray-100">
+          {source}
+        </h3>
         <div className="w-[220px]">
           <SourceSelector
             selectedSource={source}
@@ -87,19 +97,31 @@ export default function SourceBlock({
             <span className="inline-flex items-center gap-1">
               <span className="h-2 w-2 rounded-full bg-blue-400" />
               {t.fakeRisk}
-              <strong className="ml-1">
-                {stats.fakeRiskPercent.toFixed(2)}%
-              </strong>
+              <strong className="ml-1">{stats.fakeRiskPercent.toFixed(2)}%</strong>
             </span>
           )}
         </div>
       )}
 
-      {/* Feed – remount przy zmianie źródła */}
-      <div className="border border-black/5 dark:border-white/10 rounded-md">
-        <LiveNewsFeed key={source} source={source} language={language} />
+      <div className="border border-black/5 dark:border-white/10 rounded-md p-2 space-y-3">
+        {articles && articles.length > 0 ? (
+          articles.map((a, i) => (
+            <ArticleCard
+              key={a.url ?? i}
+              article={a}
+              language={language}
+              locales={locales}
+              variant="compact"
+              savedView={false}
+              onSave={handleSave}
+            />
+          ))
+        ) : (
+          <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
+            {NO_DATA_TEXT[language]}
+          </p>
+        )}
       </div>
     </div>
   );
 }
-
