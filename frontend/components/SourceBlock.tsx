@@ -56,6 +56,13 @@ export default function SourceBlock({
     return entry.data as Article[] | null;
   });
 
+  console.log(
+    "[BLOCK]", source,
+    "key=", newsKey(source),
+    "articles=", articles?.length ?? "null",
+    "sentiments=", articles?.map((a) => a.sentiment) ?? "null",
+  );
+
   const handleSave = async (article: Article) => {
     try {
       await saveArticle(article);
