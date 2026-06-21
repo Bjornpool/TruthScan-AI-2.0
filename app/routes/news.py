@@ -49,9 +49,10 @@ def get_news(source: str, lang: str = "pl", model: Optional[str] = None):
 
     resolved = _resolve_model(source, lang, model)
 
-    # Ustawienie aktywnego adaptera NLP
+    # get_adapter() zamiast set_active_adapter() — nie mutuje globalnego _active_adapter,
+    # więc równoległe wywołania (Promise.all z 14 źródeł) nie nadpisują sobie adaptera.
     try:
-        set_active_adapter(resolved)
+        adapter = get_adapter(resolved)
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Nieznany model: {resolved}")
 
@@ -76,7 +77,8 @@ def get_news(source: str, lang: str = "pl", model: Optional[str] = None):
     for entry in [e for e in feed.entries if is_recent_entry(e)][:MAX_ARTICLES]:
         summary = clean_html(entry.get("summary", "Brak opisu"))
         text_to_analyze = (summary or "").strip() or entry.get("title", "")
-        analysis = analyze_news(text_to_analyze, lang)
+        # Adapter przekazany bezpośrednio — izolowany od globalnego stanu
+        analysis = analyze_news(text_to_analyze, lang, adapter)
 
         articles.append({
             "title": entry.get("title", "Bez tytułu"),
