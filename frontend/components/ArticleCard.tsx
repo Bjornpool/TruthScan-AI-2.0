@@ -30,7 +30,7 @@ interface ArticleCardProps {
   onDelete?: (title: string) => void;
   savedView?: boolean;
   variant?: "full" | "compact";
-  onSave?: (article: Article) => void;
+  onSave?: (article: Article) => void | Promise<void>;
 }
 
 export default function ArticleCard({
@@ -51,6 +51,7 @@ export default function ArticleCard({
   const [fullContent, setFullContent] = useState<string>("");
   const [showPDF, setShowPDF] = useState(false);
   const [showCompare, setShowCompare] = useState(false);
+  const [savedOk, setSavedOk] = useState(false);
   const isCompact = variant === "compact";
   const t = locales[language] ?? locales.pl;
 
@@ -235,13 +236,27 @@ export default function ArticleCard({
           🗑️ {T("Usuń", "Slett", "Delete")}
         </button>
       ) : onSave ? (
-        <button
-          onClick={() => onSave(article)}
-          className="flex items-center gap-1 text-green-600 hover:text-green-500 hover:underline font-medium transition cursor-pointer"
-        >
-          <Bookmark className="w-3.5 h-3.5 inline" />
-          {T("Zapisz", "Lagre", "Save")}
-        </button>
+        savedOk ? (
+          <span className="flex items-center gap-1 text-green-500 font-medium text-sm">
+            ✅ {T("Zapisano!", "Lagret!", "Saved!")}
+          </span>
+        ) : (
+          <button
+            onClick={async () => {
+              try {
+                await onSave(article);
+                setSavedOk(true);
+                setTimeout(() => setSavedOk(false), 2500);
+              } catch {
+                // error handled by parent (SourceBlock)
+              }
+            }}
+            className="flex items-center gap-1 text-green-600 hover:text-green-500 hover:underline font-medium transition cursor-pointer"
+          >
+            <Bookmark className="w-3.5 h-3.5 inline" />
+            {T("Zapisz", "Lagre", "Save")}
+          </button>
+        )
       ) : null}
     </div>
   );
