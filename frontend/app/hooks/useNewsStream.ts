@@ -38,6 +38,7 @@ export function useNewsStream(source: string, lang: Lang = "pl", limit: number =
 
     // Jeżeli dane są w cache, pomijamy połączenie SSE
     if (cached && cached.length > 0) {
+      console.log(`[STREAM] ${source} key=${cacheKey} CACHE HIT ${cached.length} art. sentiments=[${cached.map((a) => a.sentiment).join(", ")}]`);
       setState({
         articles: cached,
         loading: false,
@@ -47,6 +48,8 @@ export function useNewsStream(source: string, lang: Lang = "pl", limit: number =
       });
       return;
     }
+
+    console.log(`[STREAM] ${source} key=${cacheKey} CACHE MISS — otwieranie SSE`);
 
     setState({
       articles: [],

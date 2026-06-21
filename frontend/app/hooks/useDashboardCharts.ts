@@ -39,7 +39,9 @@ export function useDashboardCharts(_language: Lang) {
     let loaded = 0;
 
     for (const src of ALL_SOURCES) {
-      const articles = cacheState.get<Article[]>(newsKey(src));
+      const key = newsKey(src);
+      const articles = cacheState.get<Article[]>(key);
+      console.log(`[CHARTS] ${src} key=${key} articles=${articles ? articles.length : "null"}`);
       if (!articles || articles.length === 0) continue;
 
       loaded++;
@@ -55,11 +57,13 @@ export function useDashboardCharts(_language: Lang) {
       for (const art of articles) {
         if (art.sentiment) {
           const norm = normalizeSent(art.sentiment);
+          console.log(`[CHARTS]   → sentiment="${art.sentiment}" norm=${norm}`);
           emosMap[norm] = (emosMap[norm] || 0) + 1;
         }
       }
     }
 
+    console.log("[CHARTS] emosMap:", { ...emosMap }, "loaded:", loaded);
     setLoadedSources(loaded);
     if (barsMap.size === 0) return;
 

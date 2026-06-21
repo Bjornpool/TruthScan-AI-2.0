@@ -62,22 +62,31 @@ export default function DashboardPage() {
 
     let completed = 0;
 
+    console.log(`[PREFETCH] start — brakujące: ${missing.join(", ")}`);
+
     // Pobieramy wszystkie brakujące źródła JEDNOCZEŚNIE — ten sam snapshot RSS
     Promise.all(
       missing.map(async (src) => {
+        const key = newsKey(src);
         try {
           const { articles } = await fetchOneSource(src, language);
           if (articles.length > 0) {
-            useNewsCache.getState().set(newsKey(src), articles);
+            useNewsCache.getState().set(key, articles);
+            console.log(
+              `[PREFETCH] ${src} key=${key} ${articles.length} art. sentiments=[${articles.map((a) => a.sentiment).join(", ")}]`
+            );
+          } else {
+            console.warn(`[PREFETCH] ${src} — brak artykułów`);
           }
-        } catch {
-          // źródło niedostępne — pomijamy, nie blokujemy reszty
+        } catch (err) {
+          console.error(`[PREFETCH] ${src} — błąd:`, err);
         } finally {
           completed++;
           setPrefetchProgress(completed);
         }
       })
     ).finally(() => {
+      console.log("[PREFETCH] done — prefetchDone=true");
       setPrefetchDone(true);
     });
     // language przechwycony w momencie uruchomienia efektu; pomijamy go
