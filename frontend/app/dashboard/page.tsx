@@ -69,7 +69,9 @@ export default function DashboardPage() {
       missing.map(async (src) => {
         const key = newsKey(src);
         try {
-          const { articles } = await fetchOneSource(src, language);
+          // timeoutMs=0 — bez limitu czasu; HerBERT/NorBERT mogą potrzebować
+          // >60s na pierwsze załadowanie modelu + analizę NLP artykułów
+          const { articles } = await fetchOneSource(src, language, 0);
           if (articles.length > 0) {
             useNewsCache.getState().set(key, articles);
             console.log(

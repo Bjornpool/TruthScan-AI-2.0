@@ -95,7 +95,8 @@ function normalizeArticle(raw: any, sourceLabel: string): Article {
 // -------------------- NOWE: pojedyncze źródło (do ładowania progresywnego) --------------------
 export async function fetchOneSource(
   source: string,
-  language: "pl" | "en" | "no" = "pl"
+  language: "pl" | "en" | "no" = "pl",
+  timeoutMs: number = 60_000   // 0 = bez limitu (dla prefetch)
 ): Promise<{ news?: NewsData; emotions: Emotions; articles: Article[] }> {
   const src = normalizeSource(source);
   const emotions: Emotions = {};
@@ -103,12 +104,13 @@ export async function fetchOneSource(
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60_000);
+    const timeoutId =
+      timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : undefined;
     const res = await fetch(
       `${apiBase}/news/${src}?lang=${language}`,
       { signal: controller.signal }
     );
-    clearTimeout(timeoutId);
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const data = await res.json();
