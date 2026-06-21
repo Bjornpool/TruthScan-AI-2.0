@@ -13,18 +13,16 @@ export function useSentiment(sentiment: string, language: "pl" | "en" | "no"): S
   return useMemo(() => {
     const sentimentUpper = (sentiment || "").toUpperCase();
 
-    // Normalizacja wyniku sentymentu do formy prezentacyjnej (UI)
+    // "POZYTYWNE" nie zawiera "POS" (zawiera "POZ") — stąd osobny check dla PL.
+    // "NEGATYWNE" zawiera "NEG" więc działa bez dodatkowego sprawdzenia.
+    const isPositive = sentimentUpper.includes("POS") || sentimentUpper.includes("POZYT");
+    const isNegative = sentimentUpper.includes("NEG");
+
     const label = language === "pl"
-      ? sentimentUpper.includes("POS") ? "Pozytywne"
-      : sentimentUpper.includes("NEG") ? "Negatywne"
-      : "Neutralne"
+      ? isPositive ? "Pozytywne" : isNegative ? "Negatywne" : "Neutralne"
       : language === "no"
-      ? sentimentUpper.includes("POS") ? "Positivt"
-      : sentimentUpper.includes("NEG") ? "Negativt"
-      : "Nøytralt"
-      : sentimentUpper.includes("POS") ? "Positive"
-      : sentimentUpper.includes("NEG") ? "Negative"
-      : "Neutral";
+      ? isPositive ? "Positivt"  : isNegative ? "Negativt"  : "Nøytralt"
+      : isPositive ? "Positive"  : isNegative ? "Negative"  : "Neutral";
 
     const positiveLabel = language === "pl" ? "Pozytywne" : language === "no" ? "Positivt" : "Positive";
     const negativeLabel = language === "pl" ? "Negatywne" : language === "no" ? "Negativt" : "Negative";

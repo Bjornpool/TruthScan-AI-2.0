@@ -43,6 +43,7 @@ export default function ArticleCard({
   onSave,
 }: ArticleCardProps) {
   const { label: sentimentLabel, color: sentimentColor } = useSentiment(article.sentiment || "", language);
+  console.log("[CARD]", article.title?.substring(0, 30), "sentiment=", article.sentiment, "→ label=", sentimentLabel);
   const { faviconSrc, sourceInitial, hasFavicon, nextFavicon } = useFavicon(article);
   const { fetchFullContent } = useArticleContent();
   const [isExporting, setIsExporting] = useState(false);
