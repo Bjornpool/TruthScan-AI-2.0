@@ -23,10 +23,18 @@ const ALL_SOURCES = [
   "NRK", "VG", "E24", "Aftenposten",
 ] as const;
 
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minut
+
 const REFRESH_TEXT = {
   pl: "Odśwież ",
   en: "Refresh ",
   no: "Oppdater ",
+} as const;
+
+const COUNTDOWN_TEXT = {
+  pl: "Odświeżenie za",
+  en: "Refresh in",
+  no: "Oppdater om",
 } as const;
 
 const LOADING_TEXT = {
@@ -43,6 +51,8 @@ export default function DashboardPage() {
   const [prefetchDone, setPrefetchDone] = useState(false);
   const [prefetchProgress, setPrefetchProgress] = useState(0);
   const [prefetchTotal, setPrefetchTotal] = useState(0);
+  const [nextRefreshAt, setNextRefreshAt] = useState<number | null>(null);
+  const [countdown, setCountdown] = useState("");
 
   useEffect(() => {
     const cacheState = useNewsCache.getState();
@@ -109,6 +119,38 @@ export default function DashboardPage() {
     setReloadKey((k) => k + 1);
   };
 
+  // Uruchamia countdown gdy prefetch gotowy; kasuje gdy ładowanie trwa
+  useEffect(() => {
+    if (prefetchDone) {
+      setNextRefreshAt(Date.now() + REFRESH_INTERVAL_MS);
+    } else {
+      setNextRefreshAt(null);
+      setCountdown("");
+    }
+  }, [prefetchDone]);
+
+  // Ticker co 1s — aktualizuje countdown i wywołuje auto-refresh gdy dojdzie do 0
+  useEffect(() => {
+    if (nextRefreshAt === null) return;
+
+    const tick = () => {
+      const remaining = nextRefreshAt - Date.now();
+      if (remaining <= 0) {
+        handleRefresh();
+        return;
+      }
+      const mins = Math.floor(remaining / 60000);
+      const secs = Math.floor((remaining % 60000) / 1000);
+      setCountdown(`${mins}:${secs.toString().padStart(2, "0")}`);
+    };
+
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+    // handleRefresh jest stabilny (cache.del + setReloadKey — oba stable refs)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nextRefreshAt]);
+
   // Ekran ładowania — wyświetlany dopóki wszystkie źródła nie trafią do cache
   if (!prefetchDone) {
     const pct =
@@ -146,7 +188,12 @@ export default function DashboardPage() {
           language={language}
           hydrated={true}
         />
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          {countdown && (
+            <span className="text-xs text-gray-400 dark:text-gray-500 tabular-nums">
+              {COUNTDOWN_TEXT[language]} {countdown}
+            </span>
+          )}
           <button
             onClick={handleRefresh}
             className="flex items-center gap-2 rounded-lg bg-white/80 px-3 py-1.5 text-sm
