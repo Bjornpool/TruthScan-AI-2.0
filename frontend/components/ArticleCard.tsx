@@ -52,7 +52,29 @@ export default function ArticleCard({
   const [showPDF, setShowPDF] = useState(false);
   const [showCompare, setShowCompare] = useState(false);
   const [savedOk, setSavedOk] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [skipNextConfirm, setSkipNextConfirm] = useState(false);
   const isCompact = variant === "compact";
+
+  const SKIP_KEY = "truthscan_skip_delete_confirm";
+
+  const handleDeleteClick = () => {
+    const skip = typeof window !== "undefined" && localStorage.getItem(SKIP_KEY) === "true";
+    if (skip) {
+      onDelete?.(article.title);
+    } else {
+      setConfirmDelete(true);
+      setSkipNextConfirm(false);
+    }
+  };
+
+  const handleConfirmDelete = () => {
+    if (skipNextConfirm && typeof window !== "undefined") {
+      localStorage.setItem(SKIP_KEY, "true");
+    }
+    setConfirmDelete(false);
+    onDelete?.(article.title);
+  };
   const t = locales[language] ?? locales.pl;
 
   const T = (pl: string, no: string, en: string) =>
@@ -221,20 +243,41 @@ export default function ArticleCard({
       )}
 
       {savedView ? (
-        <button
-          onClick={() => {
-            if (confirm(T(
-              "Czy na pewno chcesz usunąć ten artykuł?",
-              "Er du sikker på at du vil slette denne artikkelen?",
-              "Are you sure you want to delete this article?"
-            ))) {
-              onDelete?.(article.title);
-            }
-          }}
-          className="text-red-500 hover:text-red-400 hover:underline font-medium transition cursor-pointer"
-        >
-          🗑️ {T("Usuń", "Slett", "Delete")}
-        </button>
+        confirmDelete ? (
+          <span className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-red-500 font-medium">
+              {T("Na pewno usunąć?", "Vil du slette?", "Delete this?")}
+            </span>
+            <button
+              onClick={handleConfirmDelete}
+              className="text-red-500 hover:text-red-400 font-bold hover:underline cursor-pointer"
+            >
+              {T("Usuń", "Slett", "Delete")}
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="text-gray-400 hover:text-gray-500 hover:underline cursor-pointer"
+            >
+              {T("Anuluj", "Avbryt", "Cancel")}
+            </button>
+            <label className="flex items-center gap-1 text-gray-400 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={skipNextConfirm}
+                onChange={(e) => setSkipNextConfirm(e.target.checked)}
+                className="w-3 h-3 cursor-pointer"
+              />
+              <span>{T("Nie pytaj ponownie", "Ikke spør igjen", "Don't ask again")}</span>
+            </label>
+          </span>
+        ) : (
+          <button
+            onClick={handleDeleteClick}
+            className="text-red-500 hover:text-red-400 hover:underline font-medium transition cursor-pointer"
+          >
+            🗑️ {T("Usuń", "Slett", "Delete")}
+          </button>
+        )
       ) : onSave ? (
         savedOk ? (
           <span className="flex items-center gap-1 text-green-500 font-medium text-sm">
