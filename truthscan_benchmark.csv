@@ -1,0 +1,25 @@
+﻿run;adapter_name;language;avg_inference_time_ms;min_inference_time_ms;max_inference_time_ms;avg_fake_probability;sentiments_distribution;successful_runs;sample_size;total_request_time_ms;timestamp
+cold;roberta;en;441.49;404.6;522.11;5.47;Positive=4 | Negative=3 | Neutral=1;8;8;50989.9;2026-06-11 00:50:13
+cold;roberta;pl;555.2;489.87;616.82;29.9;Neutralne=8;8;8;50989.9;2026-06-11 00:50:13
+cold;roberta;no;490.46;463.74;514.31;20.52;Nøytralt=8;8;8;50989.9;2026-06-11 00:50:13
+cold;xlm-roberta;en;479.31;386.23;967.75;5.47;Positive=3 | Negative=4 | Neutral=1;8;8;50989.9;2026-06-11 00:50:13
+cold;xlm-roberta;pl;546.42;511.15;607.09;29.9;Pozytywne=3 | Negatywne=3 | Neutralne=2;8;8;50989.9;2026-06-11 00:50:13
+cold;xlm-roberta;no;479.13;454.44;499.86;20.52;Positivt=3 | Negativt=4 | Nøytralt=1;8;8;50989.9;2026-06-11 00:50:13
+cold;norbert;en;565.88;389.95;1676.39;5.47;Positive=4 | Negative=4;8;8;50989.9;2026-06-11 00:50:13
+cold;norbert;pl;548.2;486.07;607.04;29.9;Pozytywne=4 | Negatywne=3 | Neutralne=1;8;8;50989.9;2026-06-11 00:50:13
+cold;norbert;no;490.81;461.28;512.67;20.52;Positivt=4 | Negativt=3 | Nøytralt=1;8;8;50989.9;2026-06-11 00:50:13
+cold;herbert;en;584.74;398.86;1730.3;5.47;Negative=7 | Positive=1;8;8;50989.9;2026-06-11 00:50:13
+cold;herbert;pl;560.51;527.2;608.9;29.9;Pozytywne=4 | Negatywne=2 | Neutralne=2;8;8;50989.9;2026-06-11 00:50:13
+cold;herbert;no;496.19;455.91;542.77;20.52;Positivt=6 | Negativt=2;8;8;50989.9;2026-06-11 00:50:13
+warm;roberta;en;404.96;378.56;439.34;5.47;Positive=4 | Negative=3 | Neutral=1;8;8;49101.8;2026-06-11 00:50:13
+warm;roberta;pl;542.12;501.69;589.35;29.9;Neutralne=8;8;8;49101.8;2026-06-11 00:50:13
+warm;roberta;no;496.33;466.19;533.52;20.52;Nøytralt=8;8;8;49101.8;2026-06-11 00:50:13
+warm;xlm-roberta;en;409.6;392.5;443.4;5.47;Positive=3 | Negative=4 | Neutral=1;8;8;49101.8;2026-06-11 00:50:13
+warm;xlm-roberta;pl;552.25;502.97;588.6;29.9;Pozytywne=3 | Negatywne=3 | Neutralne=2;8;8;49101.8;2026-06-11 00:50:13
+warm;xlm-roberta;no;498.51;469.68;517.1;20.52;Positivt=3 | Negativt=4 | Nøytralt=1;8;8;49101.8;2026-06-11 00:50:13
+warm;norbert;en;414.1;390.39;438.38;5.47;Positive=4 | Negative=4;8;8;49101.8;2026-06-11 00:50:13
+warm;norbert;pl;555.95;524.65;614.54;29.9;Pozytywne=4 | Negatywne=3 | Neutralne=1;8;8;49101.8;2026-06-11 00:50:13
+warm;norbert;no;493.72;463.95;507.31;20.52;Positivt=4 | Negativt=3 | Nøytralt=1;8;8;49101.8;2026-06-11 00:50:13
+warm;herbert;en;420.31;394.64;457.11;5.47;Negative=7 | Positive=1;8;8;49101.8;2026-06-11 00:50:13
+warm;herbert;pl;578.95;505.3;743.55;29.9;Pozytywne=4 | Negatywne=2 | Neutralne=2;8;8;49101.8;2026-06-11 00:50:13
+warm;herbert;no;634.83;485.95;733.55;20.52;Positivt=6 | Negativt=2;8;8;49101.8;2026-06-11 00:50:13
