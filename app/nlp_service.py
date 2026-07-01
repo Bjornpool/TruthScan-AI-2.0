@@ -14,7 +14,8 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
 from concurrent.futures import ThreadPoolExecutor
 
-from transformers import pipeline
+from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification
+import torch
 
 from .config import SENTIMENT_MAP
 
@@ -282,28 +283,31 @@ class HerBERTAdapter(ModelAdapter):
 
 class NorBERTAdapter(ModelAdapter):
     """
-    Adapter dla języka norweskiego.
-      sentyment: cardiffnlp/twitter-xlm-roberta-base-sentiment-multilingual
-                 (wielojęzyczny XLM-RoBERTa Cardiff, obsługuje norweski)
+    Adapter dla języka norweskiego — NorBERT 3.
+      sentyment: ltg/norbert3-base_sentence-sentiment
+                 (NorBERT 3 base fine-tuned na sentymencie zdaniowym; wymaga
+                  bezpośredniego wywołania — niekompatybilny z pipeline())
       fake news: współdzielony BART
     """
 
-    # cardiffnlp/twitter-xlm-roberta-base-sentiment-multilingual —
-    # wielojęzyczny model Cardiff fine-tuned na sentymencie (obsługuje norweski),
-    # standardowa architektura XLM-RoBERTa kompatybilna z pipeline("text-classification").
-    SENTIMENT_MODEL: str = "cardiffnlp/twitter-xlm-roberta-base-sentiment-multilingual"
+    # NorBERT 3 ma własną architekturę (NorbertForSequenceClassification),
+    # niekompatybilną z pipeline("text-classification") — ładujemy ręcznie.
+    SENTIMENT_MODEL: str = "ltg/norbert3-base_sentence-sentiment"
 
     def __init__(self, sentiment_model: Optional[str] = None) -> None:
         self._sentiment_model_id = sentiment_model or self.SENTIMENT_MODEL
-        self._sentiment_pipe = None
+        self._tokenizer = None
+        self._model = None
 
     def _load(self) -> None:
-        if self._sentiment_pipe is None:
-            self._sentiment_pipe = pipeline(
-                "text-classification",
-                model=self._sentiment_model_id,
-                top_k=1,
+        if self._model is None:
+            self._tokenizer = AutoTokenizer.from_pretrained(
+                self._sentiment_model_id, trust_remote_code=True
             )
+            self._model = AutoModelForSequenceClassification.from_pretrained(
+                self._sentiment_model_id, trust_remote_code=True
+            )
+            self._model.eval()
 
     @property
     def name(self) -> str:
@@ -315,11 +319,18 @@ class NorBERTAdapter(ModelAdapter):
 
     def analyze_sentiment(self, text: str) -> Dict[str, Any]:
         self._load()
-        raw = self._sentiment_pipe(text)
-        result = _extract_pipeline_result(self.name, raw)
+        inputs = self._tokenizer(
+            text, return_tensors="pt", truncation=True, max_length=512
+        )
+        with torch.no_grad():
+            logits = self._model(**inputs).logits
+        probs = torch.softmax(logits, dim=-1)[0]
+        idx = int(probs.argmax())
+        label_raw = self._model.config.id2label[idx]
+        score = float(probs[idx])
         return {
-            "label": _normalize_sentiment_label(result.get("label", "")),
-            "score": float(result.get("score", 0.0)),
+            "label": _normalize_sentiment_label(label_raw),
+            "score": score,
         }
 
 
